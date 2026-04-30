@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 휴넷 면접 일정 조율 시스템
 
-## Getting Started
+휴넷 채용 담당자의 면접 일정 조율 업무를 자동화하는 사내 웹 시스템입니다.  
+면접관 가용 일정 수집 → 교집합 자동 추천 → 확정 → 캘린더 등록까지 한 곳에서 처리합니다.
 
-First, run the development server:
+## 주요 기능
+
+| 페이지 | 기능 | 상태 |
+|---|---|---|
+| 면접관 관리 | 면접관 추가·수정·삭제, 슬랙 ID 관리 | ✅ 완료 |
+| 포지션 관리 | 채용 포지션 및 차수별 면접관 배치 | ✅ 완료 |
+| 캘린더 | 주간·일간 뷰, 회의실 예약 관리 | ✅ 완료 |
+| 일정 조율 | 면접 생성, 가용 일정 수집, 자동 추천, 확정 | 🚧 개발 중 |
+| 대시보드 | 이번 주 면접 현황, 조율 대기 요약 | 🚧 개발 중 |
+
+## 기술 스택
+
+- **프레임워크**: Next.js 15 (App Router) + TypeScript
+- **스타일**: Tailwind CSS v4 + shadcn/ui
+- **데이터베이스**: Firebase Firestore
+- **상태 관리**: TanStack Query
+- **외부 연동**: Slack Web API
+
+## 시작하기
+
+### 1. 패키지 설치
+
+```bash
+npm install
+```
+
+### 2. 환경변수 설정
+
+프로젝트 루트에 `.env.local` 파일을 생성하고 아래 값을 채웁니다.  
+Firebase 값은 [Firebase 콘솔](https://console.firebase.google.com) → 프로젝트 설정에서 확인할 수 있습니다.
+
+```
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+
+SLACK_BOT_TOKEN=
+```
+
+### 3. 개발 서버 실행
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 [http://localhost:3000](http://localhost:3000) 으로 접속합니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 프로젝트 구조
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+헥사고날 아키텍처를 적용했습니다. 의존성은 `presentation → application → domain` 단방향만 허용합니다.
 
-## Learn More
+```
+src/
+├── domain/
+│   ├── model/          # 핵심 데이터 구조 (Interviewer, Position, Interview, Room)
+│   ├── repository/     # 데이터 접근 인터페이스
+│   └── service/        # 순수 비즈니스 로직 (일정 추천 알고리즘 등)
+│
+├── application/
+│   └── usecase/        # TanStack Query 훅 (데이터 조회·수정 오케스트레이션)
+│
+├── infrastructure/
+│   └── firebase/       # Firestore 실제 구현체
+│
+├── presentation/
+│   └── components/     # React UI 컴포넌트
+│
+└── app/                # Next.js 라우팅 (페이지 진입점)
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Firebase 컬렉션
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| 컬렉션 | 설명 |
+|---|---|
+| `interviewers` | 면접관 명부 |
+| `positions` | 채용 포지션 |
+| `interviews` | 면접 조율 건 |
+| `rooms` | 회의실 목록 |
+| `roomReservations` | 회의실 예약 |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 커밋 컨벤션
 
-## Deploy on Vercel
+타입은 영어, 제목과 본문은 한글로 작성합니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+Feat 면접관 가용 일정 수동 입력 기능 추가
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 면접관별로 가능한 날짜/시간대를 직접 입력 가능
+- 전원 입력 완료 시 상태를 ready_to_schedule로 자동 전환
+```
+
+| 타입 | 설명 |
+|---|---|
+| `Feat` | 새로운 기능 |
+| `Fix` | 버그 수정 |
+| `Refactor` | 리팩토링 |
+| `Design` | UI 디자인 변경 |
+| `Docs` | 문서 수정 |
+| `Chore` | 빌드·설정 변경 |
