@@ -7,12 +7,13 @@ export interface RecommendedSlot {
   endTime: string
   roomId: string
   roomName: string
+  reservationId: string
 }
 
 export interface OneDayRecommendedSlot {
   date: string
-  firstRound: { startTime: string; endTime: string }
-  secondRound: { startTime: string; endTime: string }
+  firstRound: { startTime: string; endTime: string; reservationId: string }
+  secondRound: { startTime: string; endTime: string; reservationId: string }
   roomId: string
   roomName: string
 }
@@ -68,9 +69,9 @@ export function recommendSlots(
   )
 
   for (const reservation of candidateReservations) {
-    const { date, startTime, endTime, roomId, roomName } = reservation
+    const { id: reservationId, date, startTime, endTime, roomId, roomName } = reservation
     if (!isAllAvailable(availabilities, date, startTime, endTime)) continue
-    results.push({ date, startTime, endTime, roomId, roomName })
+    results.push({ date, startTime, endTime, roomId, roomName, reservationId })
   }
 
   return results
@@ -127,8 +128,8 @@ export function recommendOneDaySlots(
 
       results.push({
         date,
-        firstRound: { startTime: first.startTime, endTime: first.endTime },
-        secondRound: { startTime: second.startTime, endTime: second.endTime },
+        firstRound: { startTime: first.startTime, endTime: first.endTime, reservationId: first.id },
+        secondRound: { startTime: second.startTime, endTime: second.endTime, reservationId: second.id },
         roomId,
         roomName,
       })
