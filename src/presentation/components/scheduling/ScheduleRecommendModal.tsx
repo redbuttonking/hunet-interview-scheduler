@@ -49,6 +49,14 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
 
   const [selectedNormal, setSelectedNormal] = useState<RecommendedSlot | null>(null)
   const [selectedOneDay, setSelectedOneDay] = useState<OneDayRecommendedSlot | null>(null)
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+
+  function normalSlotKey(slot: RecommendedSlot) {
+    return `${slot.date}_${slot.startTime}_${slot.reservationId}`
+  }
+  function oneDaySlotKey(slot: OneDayRecommendedSlot) {
+    return `${slot.date}_${slot.firstRound.startTime}_${slot.firstRound.reservationId}`
+  }
 
   async function handleConfirm() {
     if (!isOneDay && !selectedNormal) return toast.error('슬롯을 선택해주세요.')
@@ -100,12 +108,12 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
           {!isLoading && !isOneDay && normalSlots.length > 0 && (
             <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
               {normalSlots.map((slot, i) => {
-                const selected = selectedNormal === slot
+                const selected = selectedKey === normalSlotKey(slot)
                 return (
                   <button
                     key={i}
                     type="button"
-                    onClick={() => setSelectedNormal(slot)}
+                    onClick={() => { setSelectedNormal(slot); setSelectedKey(normalSlotKey(slot)) }}
                     className={cn(
                       'w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-all',
                       selected
@@ -136,12 +144,12 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
           {!isLoading && isOneDay && oneDaySlots.length > 0 && (
             <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
               {oneDaySlots.map((slot, i) => {
-                const selected = selectedOneDay === slot
+                const selected = selectedKey === oneDaySlotKey(slot)
                 return (
                   <button
                     key={i}
                     type="button"
-                    onClick={() => setSelectedOneDay(slot)}
+                    onClick={() => { setSelectedOneDay(slot); setSelectedKey(oneDaySlotKey(slot)) }}
                     className={cn(
                       'w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-all',
                       selected
