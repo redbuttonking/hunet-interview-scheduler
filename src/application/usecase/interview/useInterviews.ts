@@ -114,7 +114,46 @@ export function useSendSlack() {
   })
 }
 
-/** 일정 확정: 면접 상태 업데이트 + 회의실 예약 연동 */
+/**
+ * 예약 블록을 확정 슬롯 크기로 분할.
+ * 앞/뒤 남은 시간은 새 reserved 예약으로 생성.
+ */
+async function splitAndConfirmReservation(
+  reservationId: string,
+  date: string,
+  confirmedStart: string,
+  confirmedEnd: string,
+  interviewId: string,
+): Promise<void> {
+  const dayReservations = await roomReservationRepository.findByDateRange(date, date)
+  const original = dayReservations.find((r) => r.id === reservationId)
+  if (!original) throw new Error('예약을 찾을 수 없습니다.')
+
+  await roomReservationRepository.update(reservationId, {
+    startTime: confirmedStart,
+    endTime: confirmedEnd,
+    status: 'confirmed',
+    interviewId,
+  })
+
+  if (original.startTime < confirmedStart) {
+    await roomReservationRepository.create({
+      roomId: original.roomId, roomName: original.roomName, date,
+      startTime: original.startTime, endTime: confirmedStart,
+      status: 'reserved', interviewId: null,
+    })
+  }
+
+  if (confirmedEnd < original.endTime) {
+    await roomReservationRepository.create({
+      roomId: original.roomId, roomName: original.roomName, date,
+      startTime: confirmedEnd, endTime: original.endTime,
+      status: 'reserved', interviewId: null,
+    })
+  }
+}
+
+/** 일정 확정: 면접 상태 업데이트 + 회의실 예약 분할 연동 */
 export function useConfirmSlot() {
   const qc = useQueryClient()
   return useMutation({
@@ -127,16 +166,28 @@ export function useConfirmSlot() {
     }) => {
       if ('oneDaySlot' in slot) {
         const { oneDaySlot } = slot
-        await Promise.all([
-          roomReservationRepository.update(oneDaySlot.firstRound.reservationId, {
-            status: 'confirmed',
+        const sameReservation = oneDaySlot.firstRound.reservationId === oneDaySlot.secondRound.reservationId
+
+        if (sameReservation) {
+          // 단일 큰 블록에서 2시간 확정 — 한 번만 분할
+          await splitAndConfirmReservation(
+            oneDaySlot.firstRound.reservationId,
+            oneDaySlot.date,
+            oneDaySlot.firstRound.startTime,
+            oneDaySlot.secondRound.endTime,
             interviewId,
-          }),
-          roomReservationRepository.update(oneDaySlot.secondRound.reservationId, {
-            status: 'confirmed',
-            interviewId,
-          }),
-        ])
+          )
+        } else {
+          // 별도 예약 두 개 — 각각 분할
+          await splitAndConfirmReservation(
+            oneDaySlot.firstRound.reservationId, oneDaySlot.date,
+            oneDaySlot.firstRound.startTime, oneDaySlot.firstRound.endTime, interviewId,
+          )
+          await splitAndConfirmReservation(
+            oneDaySlot.secondRound.reservationId, oneDaySlot.date,
+            oneDaySlot.secondRound.startTime, oneDaySlot.secondRound.endTime, interviewId,
+          )
+        }
         return interviewRepository.update(interviewId, {
           status: 'confirmed',
           confirmedSlot: {
@@ -148,10 +199,10 @@ export function useConfirmSlot() {
           },
         })
       } else {
-        await roomReservationRepository.update(slot.reservationId, {
-          status: 'confirmed',
-          interviewId,
-        })
+        await splitAndConfirmReservation(
+          slot.reservationId, slot.date,
+          slot.startTime, slot.endTime, interviewId,
+        )
         return interviewRepository.update(interviewId, {
           status: 'confirmed',
           confirmedSlot: {

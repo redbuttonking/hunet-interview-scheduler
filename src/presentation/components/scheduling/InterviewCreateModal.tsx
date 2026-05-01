@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { X } from 'lucide-react'
 import { usePositions } from '@/application/usecase/position/usePositions'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
@@ -142,16 +141,22 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
           {selectedPosition && (
             <div className="space-y-1.5">
               <Label>면접 차수</Label>
-              <Select value={scheduleType} onValueChange={(v) => setScheduleType(v as ScheduleType)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="차수 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableTypes.map((t) => (
-                    <SelectItem key={t} value={t}>{SCHEDULE_LABEL[t]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                {availableTypes.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setScheduleType(t)}
+                    className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      scheduleType === t
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background text-foreground border-border hover:border-primary/50'
+                    }`}
+                  >
+                    {SCHEDULE_LABEL[t]}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
