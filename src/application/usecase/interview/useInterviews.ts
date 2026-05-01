@@ -2,8 +2,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { interviewRepository } from '@/infrastructure/firebase/InterviewRepository'
 import { roomReservationRepository } from '@/infrastructure/firebase/RoomReservationRepository'
 import { CreateInterviewInput, UpdateInterviewInput } from '@/domain/repository/IInterviewRepository'
-import { InterviewerAvailability } from '@/domain/model/Interview'
+import { Interview, InterviewerAvailability } from '@/domain/model/Interview'
 import { RecommendedSlot, OneDayRecommendedSlot } from '@/domain/service/ScheduleRecommendService'
+
+/** 확정된 면접의 회의실 예약을 reserved 상태로 원복 */
+async function resetReservation(interview: Interview): Promise<void> {
+  if (!interview.confirmedSlot) return
+  const reservations = await roomReservationRepository.findByDateRange(
+    interview.confirmedSlot.date,
+    interview.confirmedSlot.date,
+  )
+  const targets = reservations.filter((r) => r.interviewId === interview.id)
+  await Promise.all(
+    targets.map((r) => roomReservationRepository.update(r.id, { status: 'reserved', interviewId: null })),
+  )
+}
 
 export const INTERVIEWS_KEY = ['interviews']
 
@@ -31,10 +44,29 @@ export function useUpdateInterview() {
   })
 }
 
+/** 삭제 — 확정된 경우 회의실 예약도 reserved로 원복 */
 export function useDeleteInterview() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => interviewRepository.delete(id),
+    mutationFn: async (interview: Interview) => {
+      await resetReservation(interview)
+      return interviewRepository.delete(interview.id)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
+  })
+}
+
+/** 확정 취소 — ready_to_schedule로 되돌리고 회의실 예약 원복 */
+export function useRevertConfirmation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (interview: Interview) => {
+      await resetReservation(interview)
+      return interviewRepository.update(interview.id, {
+        status: 'ready_to_schedule',
+        confirmedSlot: null,
+      })
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
   })
 }

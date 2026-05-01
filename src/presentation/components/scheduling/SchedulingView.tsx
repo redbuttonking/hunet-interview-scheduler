@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from '@/lib/utils'
 import { Interview, InterviewStatus } from '@/domain/model/Interview'
 import { Interviewer } from '@/domain/model/Interviewer'
-import { useInterviews, useDeleteInterview, useSendSlack } from '@/application/usecase/interview/useInterviews'
+import { useInterviews, useDeleteInterview, useSendSlack, useRevertConfirmation } from '@/application/usecase/interview/useInterviews'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
 import InterviewCreateModal from './InterviewCreateModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
@@ -42,6 +42,7 @@ export default function SchedulingView() {
   const { data: interviews = [], isLoading } = useInterviews()
   const { data: interviewers = [] } = useInterviewers()
   const deleteInterview = useDeleteInterview()
+  const revertConfirmation = useRevertConfirmation()
   const sendSlack = useSendSlack()
 
   const [createOpen, setCreateOpen] = useState(false)
@@ -65,12 +66,21 @@ export default function SchedulingView() {
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await deleteInterview.mutateAsync(deleteTarget.id)
+      await deleteInterview.mutateAsync(deleteTarget)
       toast.success('삭제되었습니다.')
     } catch {
       toast.error('삭제 중 오류가 발생했습니다.')
     } finally {
       setDeleteTarget(null)
+    }
+  }
+
+  async function handleRevert(interview: Interview) {
+    try {
+      await revertConfirmation.mutateAsync(interview)
+      toast.success('확정이 취소되었습니다. 일정 추천 가능 상태로 돌아갑니다.')
+    } catch {
+      toast.error('확정 취소 중 오류가 발생했습니다.')
     }
   }
 
@@ -221,12 +231,23 @@ export default function SchedulingView() {
                 {/* confirmed: 확정 정보 */}
                 {interview.status === 'confirmed' && interview.confirmedSlot && (
                   <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
-                    <p className="font-semibold text-primary">확정 완료</p>
-                    <p className="text-foreground mt-1">
-                      {interview.confirmedSlot.date}&nbsp;
-                      {interview.confirmedSlot.startTime} ~ {interview.confirmedSlot.endTime}
-                      &nbsp;·&nbsp;{interview.confirmedSlot.roomName}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-primary">확정 완료</p>
+                        <p className="text-foreground mt-1">
+                          {interview.confirmedSlot.date}&nbsp;
+                          {interview.confirmedSlot.startTime} ~ {interview.confirmedSlot.endTime}
+                          &nbsp;·&nbsp;{interview.confirmedSlot.roomName}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRevert(interview)}
+                        disabled={revertConfirmation.isPending}
+                        className="text-xs text-muted-foreground hover:text-destructive underline shrink-0"
+                      >
+                        확정 취소
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
