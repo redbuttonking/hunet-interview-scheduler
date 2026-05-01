@@ -72,28 +72,12 @@ export function useSubmitAvailability() {
   })
 }
 
-/** 슬랙 발송 후 상태를 collecting으로 전환 */
+/** 수집 시작 — 상태를 collecting으로 전환 (슬랙 연동은 추후 구현) */
 export function useSendSlack() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({
-      interviewId,
-      slackIds,
-      message,
-    }: {
-      interviewId: string
-      slackIds: string[]
-      message: string
-    }) => {
-      await fetch('/api/slack/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slackIds, message }),
-      }).then((r) => {
-        if (!r.ok) throw new Error('슬랙 발송 실패')
-      })
-      return interviewRepository.update(interviewId, { status: 'collecting' })
-    },
+    mutationFn: (interviewId: string) =>
+      interviewRepository.update(interviewId, { status: 'collecting' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
   })
 }

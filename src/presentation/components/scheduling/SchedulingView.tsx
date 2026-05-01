@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from '@/lib/utils'
 import { Interview, InterviewStatus } from '@/domain/model/Interview'
 import { Interviewer } from '@/domain/model/Interviewer'
-import { useInterviews, useDeleteInterview, useSendSlack, useUpdateInterview } from '@/application/usecase/interview/useInterviews'
+import { useInterviews, useDeleteInterview, useSendSlack } from '@/application/usecase/interview/useInterviews'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
 import InterviewCreateModal from './InterviewCreateModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
@@ -28,17 +28,6 @@ const SCHEDULE_LABEL: Record<string, string> = {
   oneday: '원데이',
 }
 
-function buildSlackMessage(interview: Interview, interviewerNames: string[]): string {
-  const period = interview.availabilityPeriod
-  const periodText = period ? `${period.startDate} ~ ${period.endDate}` : ''
-  return (
-    `안녕하세요! 🙏\n` +
-    `[${interview.positionName}] ${interview.candidateName}님의 ${SCHEDULE_LABEL[interview.scheduleType]} 면접 일정 조율을 위해 연락드립니다.\n` +
-    `가용 가능한 날짜/시간대를 알려주세요.\n` +
-    `📅 요청 기간: ${periodText}\n\n` +
-    `감사합니다.`
-  )
-}
 
 interface AvailabilityModalState {
   interview: Interview
@@ -54,7 +43,6 @@ export default function SchedulingView() {
   const { data: interviewers = [] } = useInterviewers()
   const deleteInterview = useDeleteInterview()
   const sendSlack = useSendSlack()
-  const updateInterview = useUpdateInterview()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
@@ -66,30 +54,11 @@ export default function SchedulingView() {
   }
 
   async function handleSendSlack(interview: Interview) {
-    const slackIds = interview.interviewerIds
-      .map((id) => getInterviewer(id)?.slackId)
-      .filter((id): id is string => !!id)
-
-    if (slackIds.length === 0) {
-      // 슬랙 ID 없는 경우 수동으로 상태만 전환
-      await updateInterview.mutateAsync({ id: interview.id, input: { status: 'collecting' } })
-      toast.info('슬랙 ID가 없어 수동으로 수집 상태로 전환했습니다.')
-      return
-    }
-
-    const interviewerNames = interview.interviewerIds
-      .map((id) => getInterviewer(id)?.name ?? '')
-      .filter(Boolean)
-
     try {
-      await sendSlack.mutateAsync({
-        interviewId: interview.id,
-        slackIds,
-        message: buildSlackMessage(interview, interviewerNames),
-      })
-      toast.success(`${slackIds.length}명에게 슬랙 메시지를 발송했습니다.`)
+      await sendSlack.mutateAsync(interview.id)
+      toast.success('수집 상태로 전환되었습니다.')
     } catch {
-      toast.error('슬랙 발송에 실패했습니다.')
+      toast.error('오류가 발생했습니다.')
     }
   }
 
@@ -184,7 +153,7 @@ export default function SchedulingView() {
                       size="sm"
                       className="gap-1.5"
                       onClick={() => handleSendSlack(interview)}
-                      disabled={sendSlack.isPending || updateInterview.isPending}
+                      disabled={sendSlack.isPending}
                     >
                       <Send size={13} />
                       슬랙 발송
