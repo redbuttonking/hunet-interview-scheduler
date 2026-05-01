@@ -21,7 +21,7 @@ export default function Sidebar() {
       {/* 브랜드 */}
       <div className="px-5 pt-6 pb-5 border-b border-sidebar-border">
         <p className="text-base font-bold text-sidebar-foreground leading-tight">휴넷</p>
-        <p className="text-xs text-muted-foreground mt-0.5">채용 면접 시스템</p>
+        <p className="text-xs text-muted-foreground mt-0.5">채용 인터뷰 시스템</p>
       </div>
 
       {/* 네비게이션 */}

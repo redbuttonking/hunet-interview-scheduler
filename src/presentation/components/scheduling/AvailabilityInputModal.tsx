@@ -77,7 +77,7 @@ export default function AvailabilityInputModal({ open, onOpenChange, interview, 
         <DialogHeader>
           <DialogTitle>{interviewer.name}님 가용 일정 입력</DialogTitle>
           <DialogDescription>
-            {interview.candidateName} · {interview.positionName} · {interview.scheduleType}
+            {interview.candidateName} · {interview.positionName} · {interview.typeLabel}
             {period && (
               <span className="ml-2 text-xs">({period.startDate} ~ {period.endDate})</span>
             )}
