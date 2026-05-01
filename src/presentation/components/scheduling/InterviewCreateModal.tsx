@@ -11,19 +11,11 @@ import { X } from 'lucide-react'
 import { usePositions } from '@/application/usecase/position/usePositions'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
 import { useCreateInterview } from '@/application/usecase/interview/useInterviews'
-import { ScheduleType } from '@/domain/model/Interview'
 import { Round } from '@/domain/model/Position'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-}
-
-const SCHEDULE_LABEL: Record<ScheduleType, string> = {
-  '1차': '1차 면접',
-  '2차': '2차 면접',
-  '3차': '3차 면접',
-  oneday: '원데이 인터뷰 (1차+2차)',
 }
 
 export default function InterviewCreateModal({ open, onOpenChange }: Props) {
@@ -33,36 +25,27 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
 
   const [candidateName, setCandidateName] = useState('')
   const [positionId, setPositionId] = useState('')
-  const [scheduleType, setScheduleType] = useState<ScheduleType | ''>('')
+  const [selectedTypeIdx, setSelectedTypeIdx] = useState<number | null>(null)
   const [interviewerIds, setInterviewerIds] = useState<string[]>([])
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
 
   const selectedPosition = positions.find((p) => p.id === positionId) ?? null
+  const selectedType = selectedTypeIdx !== null ? selectedPosition?.interviewTypes[selectedTypeIdx] ?? null : null
 
-  const availableTypes: ScheduleType[] = selectedPosition
-    ? [
-        ...selectedPosition.rounds,
-        ...(selectedPosition.oneDayInterview ? (['oneday'] as ScheduleType[]) : []),
-      ]
-    : []
-
+  // 포지션 변경 시 초기화
   useEffect(() => {
-    setScheduleType('')
+    setSelectedTypeIdx(null)
     setInterviewerIds([])
   }, [positionId])
 
+  // 면접 유형 변경 시 면접관 자동 세팅
   useEffect(() => {
-    if (!selectedPosition || !scheduleType) return
-    const rounds: Round[] =
-      scheduleType === 'oneday'
-        ? ['1차', '2차']
-        : scheduleType === '1차' || scheduleType === '2차' || scheduleType === '3차'
-          ? [scheduleType]
-          : []
-    const ids = rounds.flatMap((r) => selectedPosition.interviewersByRound[r] ?? [])
-    setInterviewerIds([...new Set(ids)])
-  }, [scheduleType, selectedPosition])
+    if (!selectedType || !selectedPosition) return
+    const allRounds = [...new Set(selectedType.sessions.flatMap((s) => s.rounds))] as Round[]
+    const ids = [...new Set(allRounds.flatMap((r) => selectedPosition.interviewersByRound[r] ?? []))]
+    setInterviewerIds(ids)
+  }, [selectedTypeIdx, selectedPosition, selectedType])
 
   function toggleInterviewer(id: string) {
     setInterviewerIds((prev) =>
@@ -73,7 +56,7 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
   function reset() {
     setCandidateName('')
     setPositionId('')
-    setScheduleType('')
+    setSelectedTypeIdx(null)
     setInterviewerIds([])
     setStartDate('')
     setEndDate('')
@@ -82,7 +65,7 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
   async function handleSubmit() {
     if (!candidateName.trim()) return toast.error('후보자명을 입력해주세요.')
     if (!positionId) return toast.error('포지션을 선택해주세요.')
-    if (!scheduleType) return toast.error('면접 차수를 선택해주세요.')
+    if (selectedTypeIdx === null || !selectedType) return toast.error('인터뷰 유형을 선택해주세요.')
     if (interviewerIds.length === 0) return toast.error('면접관을 1명 이상 선택해주세요.')
     if (!startDate || !endDate) return toast.error('가용 일정 요청 기간을 입력해주세요.')
     if (startDate > endDate) return toast.error('종료일이 시작일보다 빠릅니다.')
@@ -92,11 +75,13 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
         candidateName: candidateName.trim(),
         positionId,
         positionName: selectedPosition!.name,
-        scheduleType,
+        typeLabel: selectedType.label,
+        sessions: selectedType.sessions,
         interviewerIds,
+        interviewersByRound: selectedPosition!.interviewersByRound,
         availabilityPeriod: { startDate, endDate },
       })
-      toast.success('면접 조율 건이 생성되었습니다.')
+      toast.success('인터뷰 조율 건이 생성되었습니다.')
       reset()
       onOpenChange(false)
     } catch {
@@ -108,7 +93,7 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o) }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>새 면접 만들기</DialogTitle>
+          <DialogTitle>새 인터뷰 만들기</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
@@ -126,34 +111,34 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
           <div className="space-y-1.5">
             <Label>포지션</Label>
             <Select value={positionId} onValueChange={(v) => v && setPositionId(v)}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="포지션 선택" />
               </SelectTrigger>
               <SelectContent>
                 {positions.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  <SelectItem key={p.id} value={p.id} label={p.name}>{p.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* 면접 차수 */}
-          {selectedPosition && (
+          {/* 인터뷰 유형 */}
+          {selectedPosition && selectedPosition.interviewTypes.length > 0 && (
             <div className="space-y-1.5">
-              <Label>면접 차수</Label>
+              <Label>인터뷰 유형</Label>
               <div className="flex flex-wrap gap-2">
-                {availableTypes.map((t) => (
+                {selectedPosition.interviewTypes.map((type, idx) => (
                   <button
-                    key={t}
+                    key={idx}
                     type="button"
-                    onClick={() => setScheduleType(t)}
+                    onClick={() => setSelectedTypeIdx(idx)}
                     className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                      scheduleType === t
+                      selectedTypeIdx === idx
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-background text-foreground border-border hover:border-primary/50'
                     }`}
                   >
-                    {SCHEDULE_LABEL[t]}
+                    {type.label}
                   </button>
                 ))}
               </div>
@@ -161,7 +146,7 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
           )}
 
           {/* 면접관 */}
-          {scheduleType && (
+          {selectedType && (
             <div className="space-y-1.5">
               <Label>면접관</Label>
               <div className="flex flex-wrap gap-1.5">

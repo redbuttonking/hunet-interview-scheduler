@@ -5,7 +5,7 @@ import {
 import { db } from './config'
 import { COLLECTIONS } from './collections'
 import { Interview, InterviewerAvailability } from '@/domain/model/Interview'
-import { ScheduleType } from '@/domain/model/Interview'
+import { Round } from '@/domain/model/Position'
 import {
   IInterviewRepository,
   CreateInterviewInput,
@@ -18,8 +18,10 @@ function toInterview(id: string, data: Record<string, unknown>): Interview {
     candidateName: data.candidateName as string,
     positionId: data.positionId as string,
     positionName: data.positionName as string,
-    scheduleType: data.scheduleType as ScheduleType,
+    typeLabel: (data.typeLabel as string) ?? '',
+    sessions: (data.sessions as { rounds: Round[] }[]) ?? [],
     interviewerIds: (data.interviewerIds as string[]) ?? [],
+    interviewersByRound: (data.interviewersByRound as Partial<Record<Round, string[]>>) ?? {},
     status: data.status as Interview['status'],
     availabilityPeriod: (data.availabilityPeriod as Interview['availabilityPeriod']) ?? null,
     availabilities: (data.availabilities as InterviewerAvailability[]) ?? [],

@@ -2,18 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { X, Search } from 'lucide-react'
+import { X, Search, Plus, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Position, Round } from '@/domain/model/Position'
+import { Position, Round, InterviewType, ALL_ROUNDS } from '@/domain/model/Position'
 import { Interviewer } from '@/domain/model/Interviewer'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
 import { useCreatePosition, useUpdatePosition } from '@/application/usecase/position/usePositions'
-
-const ALL_ROUNDS: Round[] = ['1차', '2차', '3차']
 
 interface Props {
   open: boolean
@@ -21,7 +19,6 @@ interface Props {
   position: Position | null
 }
 
-/** 차수별 면접관 검색 인풋 컴포넌트 */
 function InterviewerSearch({
   round,
   allInterviewers,
@@ -40,8 +37,6 @@ function InterviewerSearch({
   const containerRef = useRef<HTMLDivElement>(null)
 
   const addedInterviewers = allInterviewers.filter((iv) => addedIds.includes(iv.id))
-
-  // 검색어로 필터링 (추가되지 않은 면접관만)
   const filtered = allInterviewers.filter((iv) => {
     if (addedIds.includes(iv.id)) return false
     if (!query) return true
@@ -49,7 +44,6 @@ function InterviewerSearch({
     return iv.name.includes(q) || iv.slackId.toLowerCase().includes(q)
   })
 
-  // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -61,37 +55,21 @@ function InterviewerSearch({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  function handleSelect(id: string) {
-    onAdd(id)
-    setQuery('')
-  }
-
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
       <span className="text-xs font-semibold text-muted-foreground">{round} 면접관</span>
-
-      {/* 선택된 면접관 태그 */}
       {addedInterviewers.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {addedInterviewers.map((iv) => (
-            <span
-              key={iv.id}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium"
-            >
+            <span key={iv.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
               {iv.name}
-              <button
-                type="button"
-                onClick={() => onRemove(iv.id)}
-                className="hover:text-primary/60 transition-colors"
-              >
+              <button type="button" onClick={() => onRemove(iv.id)} className="hover:text-primary/60">
                 <X size={11} />
               </button>
             </span>
           ))}
         </div>
       )}
-
-      {/* 검색 인풋 */}
       <div ref={containerRef} className="relative">
         <div className="relative">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -104,8 +82,6 @@ function InterviewerSearch({
             className="w-full pl-7 pr-3 py-1.5 text-xs rounded-md border border-border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
-
-        {/* 검색 결과 드롭다운 */}
         {focused && (
           <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border border-border bg-popover shadow-md overflow-hidden">
             {filtered.length === 0 ? (
@@ -118,11 +94,8 @@ function InterviewerSearch({
                   <button
                     key={iv.id}
                     type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault() // blur 방지
-                      handleSelect(iv.id)
-                    }}
-                    className="flex items-center justify-between w-full px-3 py-2 text-left hover:bg-muted transition-colors"
+                    onMouseDown={(e) => { e.preventDefault(); onAdd(iv.id); setQuery('') }}
+                    className="flex items-center justify-between w-full px-3 py-2 text-left hover:bg-muted"
                   >
                     <span className="text-sm font-medium">{iv.name}</span>
                     <span className="text-xs text-muted-foreground font-mono">@{iv.slackId}</span>
@@ -137,53 +110,95 @@ function InterviewerSearch({
   )
 }
 
+const ROUND_COLORS: Record<Round, string> = {
+  '1차': 'bg-blue-50 text-blue-700 border-blue-200',
+  '2차': 'bg-violet-50 text-violet-700 border-violet-200',
+  '3차': 'bg-orange-50 text-orange-700 border-orange-200',
+}
+
 export default function PositionModal({ open, onOpenChange, position }: Props) {
   const isEdit = position !== null
   const { data: interviewers = [] } = useInterviewers()
-
-  const [name, setName] = useState('')
-  const [selectedRounds, setSelectedRounds] = useState<Round[]>([])
-  const [oneDayInterview, setOneDayInterview] = useState(false)
-  const [ivByRound, setIvByRound] = useState<Partial<Record<Round, string[]>>>({})
-
   const create = useCreatePosition()
   const update = useUpdatePosition()
   const isPending = create.isPending || update.isPending
+
+  const [name, setName] = useState('')
+  const [interviewTypes, setInterviewTypes] = useState<InterviewType[]>([])
+  const [ivByRound, setIvByRound] = useState<Partial<Record<Round, string[]>>>({})
 
   useEffect(() => {
     if (!open) return
     if (position) {
       setName(position.name)
-      setSelectedRounds([...position.rounds])
-      setOneDayInterview(position.oneDayInterview)
+      setInterviewTypes(position.interviewTypes.map((t) => ({
+        label: t.label,
+        sessions: t.sessions.map((s) => ({ rounds: [...s.rounds] })),
+      })))
       setIvByRound({ ...position.interviewersByRound })
     } else {
       setName('')
-      setSelectedRounds([])
-      setOneDayInterview(false)
+      setInterviewTypes([])
       setIvByRound({})
     }
   }, [open, position])
 
-  function toggleRound(round: Round) {
-    setSelectedRounds((prev) =>
-      prev.includes(round) ? prev.filter((r) => r !== round) : [...prev, round],
-    )
-    if (round === '1차' || round === '2차') setOneDayInterview(false)
+  // 모든 유형에서 사용된 차수 집합
+  const usedRounds = ALL_ROUNDS.filter((r) =>
+    interviewTypes.some((t) => t.sessions.some((s) => s.rounds.includes(r))),
+  )
+
+  function addType() {
+    setInterviewTypes((prev) => [...prev, { label: '', sessions: [{ rounds: [] }] }])
   }
 
-  const canOneDay = selectedRounds.includes('1차') && selectedRounds.includes('2차')
+  function removeType(ti: number) {
+    setInterviewTypes((prev) => prev.filter((_, i) => i !== ti))
+  }
+
+  function updateTypeLabel(ti: number, label: string) {
+    setInterviewTypes((prev) => prev.map((t, i) => i === ti ? { ...t, label } : t))
+  }
+
+  function addSession(ti: number) {
+    setInterviewTypes((prev) =>
+      prev.map((t, i) => i === ti ? { ...t, sessions: [...t.sessions, { rounds: [] }] } : t),
+    )
+  }
+
+  function removeSession(ti: number, si: number) {
+    setInterviewTypes((prev) =>
+      prev.map((t, i) => i === ti ? { ...t, sessions: t.sessions.filter((_, j) => j !== si) } : t),
+    )
+  }
+
+  function toggleRound(ti: number, si: number, round: Round) {
+    setInterviewTypes((prev) =>
+      prev.map((t, i) => {
+        if (i !== ti) return t
+        return {
+          ...t,
+          sessions: t.sessions.map((s, j) => {
+            if (j !== si) return s
+            const next = s.rounds.includes(round)
+              ? s.rounds.filter((r) => r !== round)
+              : [...s.rounds, round]
+            return { rounds: ALL_ROUNDS.filter((r) => next.includes(r)) }
+          }),
+        }
+      }),
+    )
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim() || selectedRounds.length === 0) return
+    if (!name.trim()) return toast.error('포지션명을 입력해주세요.')
+    if (interviewTypes.length === 0) return toast.error('인터뷰 유형을 1개 이상 추가해주세요.')
+    if (interviewTypes.some((t) => !t.label.trim())) return toast.error('모든 인터뷰 유형에 이름을 입력해주세요.')
+    if (interviewTypes.some((t) => t.sessions.some((s) => s.rounds.length === 0)))
+      return toast.error('모든 세션에 차수를 1개 이상 선택해주세요.')
 
-    const payload = {
-      name: name.trim(),
-      rounds: selectedRounds,
-      oneDayInterview: canOneDay ? oneDayInterview : false,
-      interviewersByRound: ivByRound,
-    }
+    const payload = { name: name.trim(), interviewTypes, interviewersByRound: ivByRound }
 
     try {
       if (isEdit) {
@@ -201,7 +216,7 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? '포지션 편집' : '포지션 추가'}</DialogTitle>
         </DialogHeader>
@@ -219,58 +234,92 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
             />
           </div>
 
-          {/* 채용 절차 */}
+          {/* 인터뷰 유형 */}
           <div className="flex flex-col gap-2">
-            <Label>채용 절차</Label>
-            <div className="flex gap-2">
-              {ALL_ROUNDS.map((round) => {
-                const active = selectedRounds.includes(round)
-                return (
+            <Label>인터뷰 유형</Label>
+            <div className="flex flex-col gap-3">
+              {interviewTypes.map((type, ti) => (
+                <div key={ti} className="rounded-lg border border-border p-3 flex flex-col gap-2.5">
+                  {/* 유형명 + 삭제 */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={type.label}
+                      onChange={(e) => updateTypeLabel(ti, e.target.value)}
+                      placeholder="유형명 (예: 1차 면접, 원데이 1차→2차)"
+                      className="flex-1 px-2.5 py-1.5 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeType(ti)}
+                      className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+
+                  {/* 세션 목록 */}
+                  {type.sessions.map((session, si) => (
+                    <div key={si} className="flex items-center gap-2 pl-1">
+                      <span className="text-xs text-muted-foreground w-14 shrink-0">
+                        {type.sessions.length > 1 ? `세션 ${si + 1}` : '세션'}
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 flex-1">
+                        {ALL_ROUNDS.map((round) => {
+                          const active = session.rounds.includes(round)
+                          return (
+                            <button
+                              key={round}
+                              type="button"
+                              onClick={() => toggleRound(ti, si, round)}
+                              className={cn(
+                                'px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors',
+                                active ? ROUND_COLORS[round] : 'bg-background text-muted-foreground border-border hover:border-primary/40',
+                              )}
+                            >
+                              {round}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {type.sessions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeSession(ti, si)}
+                          className="p-1 text-muted-foreground hover:text-destructive"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
                   <button
-                    key={round}
                     type="button"
-                    onClick={() => toggleRound(round)}
-                    className={cn(
-                      'px-4 py-1.5 rounded-full text-sm font-medium border transition-colors',
-                      active
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-background text-muted-foreground border-border hover:border-primary/50',
-                    )}
+                    onClick={() => addSession(ti)}
+                    className="text-xs text-primary hover:underline text-left pl-1"
                   >
-                    {round}
+                    + 세션 추가
                   </button>
-                )
-              })}
+                </div>
+              ))}
             </div>
+
+            <button
+              type="button"
+              onClick={addType}
+              className="flex items-center gap-1.5 text-sm text-primary hover:underline mt-1"
+            >
+              <Plus size={14} />
+              인터뷰 유형 추가
+            </button>
           </div>
 
-          {/* 원데이 인터뷰 */}
-          {canOneDay && (
-            <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-              <p className="text-sm font-medium">원데이 인터뷰</p>
-              <button
-                type="button"
-                onClick={() => setOneDayInterview((v) => !v)}
-                className={cn(
-                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                  oneDayInterview ? 'bg-primary' : 'bg-muted-foreground/30',
-                )}
-              >
-                <span
-                  className={cn(
-                    'inline-block h-4 w-4 rounded-full bg-white shadow transition-transform',
-                    oneDayInterview ? 'translate-x-6' : 'translate-x-1',
-                  )}
-                />
-              </button>
-            </div>
-          )}
-
           {/* 차수별 면접관 배치 */}
-          {selectedRounds.length > 0 && (
+          {usedRounds.length > 0 && (
             <div className="flex flex-col gap-3">
               <Label>면접관 배치</Label>
-              {ALL_ROUNDS.filter((r) => selectedRounds.includes(r)).map((round) => (
+              {usedRounds.map((round) => (
                 <InterviewerSearch
                   key={round}
                   round={round}
@@ -294,7 +343,7 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
               취소
             </Button>
-            <Button type="submit" disabled={isPending || !name.trim() || selectedRounds.length === 0}>
+            <Button type="submit" disabled={isPending || !name.trim() || interviewTypes.length === 0}>
               {isPending ? '저장 중...' : isEdit ? '저장' : '추가'}
             </Button>
           </div>

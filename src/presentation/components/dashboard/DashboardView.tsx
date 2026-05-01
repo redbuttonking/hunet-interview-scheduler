@@ -6,9 +6,6 @@ import { cn } from '@/lib/utils'
 import { Interview, InterviewStatus } from '@/domain/model/Interview'
 import { useInterviews } from '@/application/usecase/interview/useInterviews'
 
-const SCHEDULE_LABEL: Record<string, string> = {
-  '1차': '1차', '2차': '2차', '3차': '3차', oneday: '원데이',
-}
 
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string }> = {
   pending_slack:     { label: '슬랙 발송 전',   className: 'bg-muted text-muted-foreground' },
@@ -63,7 +60,7 @@ export default function DashboardView() {
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard
-          label="예정된 면접"
+          label="예정된 인터뷰"
           value={isLoading ? '—' : String(upcomingConfirmed.length)}
           icon={CalendarCheck}
           color="text-primary bg-primary/10"
@@ -76,13 +73,13 @@ export default function DashboardView() {
         />
       </div>
 
-      {/* 예정된 면접 목록 */}
+      {/* 예정된 인터뷰 목록 */}
       <section>
-        <h2 className="text-sm font-semibold text-foreground mb-3">예정된 면접</h2>
+        <h2 className="text-sm font-semibold text-foreground mb-3">예정된 인터뷰</h2>
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
           {isLoading && <LoadingRow />}
           {!isLoading && upcomingConfirmed.length === 0 && (
-            <EmptyRow text="예정된 면접이 없습니다." />
+            <EmptyRow text="예정된 인터뷰가 없습니다." />
           )}
           {!isLoading && upcomingConfirmed.length > 0 && (
             <div className="divide-y divide-border">
@@ -94,14 +91,18 @@ export default function DashboardView() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{iv.candidateName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {iv.positionName} · {SCHEDULE_LABEL[iv.scheduleType]}
+                      {iv.positionName} · {iv.typeLabel}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-xs text-foreground">
                       {iv.confirmedSlot!.startTime} ~ {iv.confirmedSlot!.endTime}
                     </p>
-                    <p className="text-xs text-muted-foreground">{iv.confirmedSlot!.roomName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {iv.confirmedSlot!.slots?.length
+                        ? [...new Set(iv.confirmedSlot!.slots.map((s) => s.roomName))].join(' / ')
+                        : (iv.confirmedSlot as unknown as { roomName: string }).roomName}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -123,7 +124,7 @@ export default function DashboardView() {
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
           {isLoading && <LoadingRow />}
           {!isLoading && pending.length === 0 && (
-            <EmptyRow text="조율 대기 중인 면접이 없습니다." />
+            <EmptyRow text="조율 대기 중인 인터뷰가 없습니다." />
           )}
           {!isLoading && pending.length > 0 && (
             <div className="divide-y divide-border">
@@ -163,7 +164,7 @@ function PendingRow({ interview: iv }: { interview: Interview }) {
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-foreground truncate">{iv.candidateName}</p>
         <p className="text-xs text-muted-foreground">
-          {iv.positionName} · {SCHEDULE_LABEL[iv.scheduleType]}
+          {iv.positionName} · {iv.typeLabel}
         </p>
       </div>
       <div className="shrink-0 text-right">

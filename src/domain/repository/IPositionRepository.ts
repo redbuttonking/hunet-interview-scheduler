@@ -1,17 +1,14 @@
-import { Position } from '../model/Position'
-import { Round } from '../model/Position'
+import { Position, InterviewType, Round } from '../model/Position'
 
 export interface CreatePositionInput {
   name: string
-  rounds: Round[]
-  oneDayInterview: boolean
+  interviewTypes: InterviewType[]
   interviewersByRound: Partial<Record<Round, string[]>>
 }
 
 export interface UpdatePositionInput {
   name?: string
-  rounds?: Round[]
-  oneDayInterview?: boolean
+  interviewTypes?: InterviewType[]
   interviewersByRound?: Partial<Record<Round, string[]>>
 }
 

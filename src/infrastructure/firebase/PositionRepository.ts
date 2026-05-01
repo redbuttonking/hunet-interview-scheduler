@@ -4,7 +4,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 import { COLLECTIONS } from './collections'
-import { Position, Round } from '@/domain/model/Position'
+import { Position, InterviewType, Round } from '@/domain/model/Position'
 import {
   IPositionRepository,
   CreatePositionInput,
@@ -15,9 +15,8 @@ function toPosition(id: string, data: Record<string, unknown>): Position {
   return {
     id,
     name: data.name as string,
-    rounds: (data.rounds as Round[]) ?? [],
-    oneDayInterview: (data.oneDayInterview as boolean) ?? false,
-    interviewersByRound: (data.interviewersByRound as Record<Round, string[]>) ?? {},
+    interviewTypes: (data.interviewTypes as InterviewType[]) ?? [],
+    interviewersByRound: (data.interviewersByRound as Partial<Record<Round, string[]>>) ?? {},
     createdAt: (data.createdAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
     updatedAt: (data.updatedAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
   }

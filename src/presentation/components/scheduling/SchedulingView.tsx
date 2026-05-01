@@ -21,14 +21,6 @@ const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string 
   confirmed: { label: '확정', className: 'bg-primary/10 text-primary' },
 }
 
-const SCHEDULE_LABEL: Record<string, string> = {
-  '1차': '1차',
-  '2차': '2차',
-  '3차': '3차',
-  oneday: '원데이',
-}
-
-
 interface AvailabilityModalState {
   interview: Interview
   interviewer: Interviewer
@@ -90,11 +82,11 @@ export default function SchedulingView() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">일정 조율</h1>
-          <p className="text-sm text-muted-foreground mt-1">후보자별 면접 일정을 생성하고 조율합니다.</p>
+          <p className="text-sm text-muted-foreground mt-1">후보자별 인터뷰 일정을 생성하고 조율합니다.</p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
           <Plus size={15} />
-          새 면접 만들기
+          새 인터뷰 만들기
         </Button>
       </div>
 
@@ -113,7 +105,7 @@ export default function SchedulingView() {
             <CalendarDays size={22} className="opacity-40" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-foreground">진행 중인 면접 조율이 없습니다</p>
+            <p className="text-sm font-medium text-foreground">진행 중인 인터뷰 조율이 없습니다</p>
             <p className="text-xs mt-1">새 면접 만들기 버튼을 눌러 시작해주세요.</p>
           </div>
         </div>
@@ -139,7 +131,7 @@ export default function SchedulingView() {
                     <span className="text-muted-foreground text-sm">·</span>
                     <span className="text-sm text-muted-foreground">{interview.positionName}</span>
                     <span className="text-muted-foreground text-sm">·</span>
-                    <span className="text-sm text-muted-foreground">{SCHEDULE_LABEL[interview.scheduleType]}</span>
+                    <span className="text-sm text-muted-foreground">{interview.typeLabel}</span>
                   </div>
                   <button
                     onClick={() => setDeleteTarget(interview)}
@@ -237,8 +229,16 @@ export default function SchedulingView() {
                         <p className="text-foreground mt-1">
                           {interview.confirmedSlot.date}&nbsp;
                           {interview.confirmedSlot.startTime} ~ {interview.confirmedSlot.endTime}
-                          &nbsp;·&nbsp;{interview.confirmedSlot.roomName}
                         </p>
+                        {interview.confirmedSlot.slots?.length > 0 && (
+                          <div className="flex flex-col gap-0.5 mt-1">
+                            {interview.confirmedSlot.slots.map((slot, si) => (
+                              <p key={si} className="text-xs text-muted-foreground">
+                                {slot.startTime}~{slot.endTime} · {slot.roomName}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <button
                         onClick={() => handleRevert(interview)}
@@ -280,10 +280,10 @@ export default function SchedulingView() {
       <Dialog open={deleteTarget !== null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>면접 조율 건 삭제</DialogTitle>
+            <DialogTitle>인터뷰 조율 건 삭제</DialogTitle>
             <DialogDescription>
               <span className="font-semibold text-foreground">{deleteTarget?.candidateName}</span>님의
-              면접 조율 건을 삭제하시겠습니까?
+              인터뷰 조율 건을 삭제하시겠습니까?
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-2">
