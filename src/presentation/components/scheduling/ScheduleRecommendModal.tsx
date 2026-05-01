@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
 import { CalendarCheck, Clock, CheckCircle2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -22,10 +22,19 @@ interface Props {
   interview: Interview
 }
 
+type SortType = 'time' | 'room'
+
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
   const days = ['일', '월', '화', '수', '목', '금', '토']
   return `${d.getMonth() + 1}/${d.getDate()}(${days[d.getDay()]})`
+}
+
+function normalSlotKey(slot: RecommendedSlot) {
+  return `${slot.date}_${slot.startTime}_${slot.reservationId}`
+}
+function oneDaySlotKey(slot: OneDayRecommendedSlot) {
+  return `${slot.date}_${slot.firstRound.startTime}_${slot.firstRound.reservationId}`
 }
 
 export default function ScheduleRecommendModal({ open, onOpenChange, interview }: Props) {
@@ -39,29 +48,38 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
 
   const isOneDay = interview.scheduleType === 'oneday'
 
-  const normalSlots: RecommendedSlot[] = isOneDay
-    ? []
-    : recommendSlots(interview.availabilities, reservations, [])
+  const rawNormalSlots = useMemo(
+    () => isOneDay ? [] : recommendSlots(interview.availabilities, reservations, []),
+    [isOneDay, interview.availabilities, reservations],
+  )
 
-  const oneDaySlots: OneDayRecommendedSlot[] = isOneDay
-    ? recommendOneDaySlots(interview.availabilities, interview.availabilities, reservations)
-    : []
+  const rawOneDaySlots = useMemo(
+    () => isOneDay ? recommendOneDaySlots(interview.availabilities, interview.availabilities, reservations) : [],
+    [isOneDay, interview.availabilities, reservations],
+  )
 
   const [selectedNormal, setSelectedNormal] = useState<RecommendedSlot | null>(null)
   const [selectedOneDay, setSelectedOneDay] = useState<OneDayRecommendedSlot | null>(null)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<SortType>('time')
 
-  function normalSlotKey(slot: RecommendedSlot) {
-    return `${slot.date}_${slot.startTime}_${slot.reservationId}`
-  }
-  function oneDaySlotKey(slot: OneDayRecommendedSlot) {
-    return `${slot.date}_${slot.firstRound.startTime}_${slot.firstRound.reservationId}`
-  }
+  const normalSlots = useMemo(() => {
+    const copy = [...rawNormalSlots]
+    return sortBy === 'time'
+      ? copy.sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime))
+      : copy.sort((a, b) => a.roomName.localeCompare(b.roomName) || (a.date + a.startTime).localeCompare(b.date + b.startTime))
+  }, [rawNormalSlots, sortBy])
+
+  const oneDaySlots = useMemo(() => {
+    const copy = [...rawOneDaySlots]
+    return sortBy === 'time'
+      ? copy.sort((a, b) => (a.date + a.firstRound.startTime).localeCompare(b.date + b.firstRound.startTime))
+      : copy.sort((a, b) => a.roomName.localeCompare(b.roomName) || (a.date + a.firstRound.startTime).localeCompare(b.date + b.firstRound.startTime))
+  }, [rawOneDaySlots, sortBy])
 
   async function handleConfirm() {
     if (!isOneDay && !selectedNormal) return toast.error('슬롯을 선택해주세요.')
     if (isOneDay && !selectedOneDay) return toast.error('슬롯을 선택해주세요.')
-
     try {
       if (isOneDay && selectedOneDay) {
         await confirmSlot.mutateAsync({ interviewId: interview.id, slot: { oneDaySlot: selectedOneDay } })
@@ -76,6 +94,7 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
   }
 
   const hasSlots = isOneDay ? oneDaySlots.length > 0 : normalSlots.length > 0
+  const totalCount = isOneDay ? oneDaySlots.length : normalSlots.length
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,91 +118,110 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
             <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground text-center">
               <CalendarCheck size={28} className="opacity-40" />
               <p className="text-sm font-medium text-foreground">추천 가능한 슬롯이 없습니다</p>
-              <p className="text-xs">
-                캘린더에 회의실 예약을 먼저 등록하거나, 면접관 가용 일정을 다시 확인해주세요.
-              </p>
+              <p className="text-xs">캘린더에 회의실 예약을 먼저 등록하거나, 면접관 가용 일정을 다시 확인해주세요.</p>
             </div>
           )}
 
-          {!isLoading && !isOneDay && normalSlots.length > 0 && (
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-              {normalSlots.map((slot, i) => {
-                const selected = selectedKey === normalSlotKey(slot)
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => { setSelectedNormal(slot); setSelectedKey(normalSlotKey(slot)) }}
-                    className={cn(
-                      'w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-all',
-                      selected
-                        ? 'border-primary bg-primary/10 shadow-sm'
-                        : 'border-border hover:border-primary/40 hover:bg-muted/30',
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={cn('font-semibold', selected ? 'text-primary' : 'text-foreground')}>
-                        {formatDate(slot.date)}
-                      </span>
-                      {selected && <CheckCircle2 size={16} className="text-primary shrink-0" />}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-1 text-sm">
-                      <Clock size={12} className={selected ? 'text-primary' : 'text-muted-foreground'} />
-                      <span className={selected ? 'text-primary font-medium' : 'text-muted-foreground'}>
-                        {slot.startTime} ~ {slot.endTime}
-                      </span>
-                      <span className="text-muted-foreground mx-0.5">·</span>
-                      <span className="text-muted-foreground">{slot.roomName}</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          {!isLoading && hasSlots && (
+            <>
+              {/* 정렬 + 건수 */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-muted-foreground">총 {totalCount}개 슬롯</span>
+                <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                  {(['time', 'room'] as SortType[]).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSortBy(type)}
+                      className={cn(
+                        'px-3 py-1 rounded-md text-xs font-medium transition-colors',
+                        sortBy === type
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {type === 'time' ? '시간순' : '회의실순'}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {!isLoading && isOneDay && oneDaySlots.length > 0 && (
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-              {oneDaySlots.map((slot, i) => {
-                const selected = selectedKey === oneDaySlotKey(slot)
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => { setSelectedOneDay(slot); setSelectedKey(oneDaySlotKey(slot)) }}
-                    className={cn(
-                      'w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-all',
-                      selected
-                        ? 'border-primary bg-primary/10 shadow-sm'
-                        : 'border-border hover:border-primary/40 hover:bg-muted/30',
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={cn('font-semibold', selected ? 'text-primary' : 'text-foreground')}>
-                        {formatDate(slot.date)}
-                      </span>
-                      {selected && <CheckCircle2 size={16} className="text-primary shrink-0" />}
-                    </div>
-                    <div className="flex flex-col gap-0.5 mt-1">
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <Clock size={12} className="text-muted-foreground" />
-                        <span className="text-blue-600 font-semibold text-xs">1차</span>
-                        <span className={selected ? 'text-primary font-medium' : 'text-muted-foreground'}>
-                          {slot.firstRound.startTime} ~ {slot.firstRound.endTime}
+              {/* 슬롯 목록 */}
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {!isOneDay && normalSlots.map((slot, i) => {
+                  const selected = selectedKey === normalSlotKey(slot)
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => { setSelectedNormal(slot); setSelectedKey(normalSlotKey(slot)) }}
+                      className={cn(
+                        'w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-all',
+                        selected
+                          ? 'border-primary bg-primary/10 shadow-sm'
+                          : 'border-border hover:border-primary/40 hover:bg-muted/30',
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={cn('font-semibold', selected ? 'text-primary' : 'text-foreground')}>
+                          {formatDate(slot.date)}
                         </span>
+                        {selected && <CheckCircle2 size={16} className="text-primary shrink-0" />}
                       </div>
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <Clock size={12} className="text-muted-foreground" />
-                        <span className="text-violet-600 font-semibold text-xs">2차</span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <Clock size={12} className={selected ? 'text-primary' : 'text-muted-foreground'} />
                         <span className={selected ? 'text-primary font-medium' : 'text-muted-foreground'}>
-                          {slot.secondRound.startTime} ~ {slot.secondRound.endTime}
+                          {slot.startTime} ~ {slot.endTime}
                         </span>
+                        <span className="text-muted-foreground mx-0.5">·</span>
+                        <span className="text-muted-foreground">{slot.roomName}</span>
                       </div>
-                      <span className="text-xs text-muted-foreground mt-0.5">· {slot.roomName}</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
+                    </button>
+                  )
+                })}
+
+                {isOneDay && oneDaySlots.map((slot, i) => {
+                  const selected = selectedKey === oneDaySlotKey(slot)
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => { setSelectedOneDay(slot); setSelectedKey(oneDaySlotKey(slot)) }}
+                      className={cn(
+                        'w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-all',
+                        selected
+                          ? 'border-primary bg-primary/10 shadow-sm'
+                          : 'border-border hover:border-primary/40 hover:bg-muted/30',
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={cn('font-semibold', selected ? 'text-primary' : 'text-foreground')}>
+                          {formatDate(slot.date)}
+                        </span>
+                        {selected && <CheckCircle2 size={16} className="text-primary shrink-0" />}
+                      </div>
+                      <div className="flex flex-col gap-0.5 mt-1">
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={12} className="text-muted-foreground" />
+                          <span className="text-blue-600 font-semibold text-xs">1차</span>
+                          <span className={selected ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                            {slot.firstRound.startTime} ~ {slot.firstRound.endTime}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={12} className="text-muted-foreground" />
+                          <span className="text-violet-600 font-semibold text-xs">2차</span>
+                          <span className={selected ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                            {slot.secondRound.startTime} ~ {slot.secondRound.endTime}
+                          </span>
+                        </div>
+                        <span className="text-xs text-muted-foreground mt-0.5">· {slot.roomName}</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </>
           )}
         </div>
 
