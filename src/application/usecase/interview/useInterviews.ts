@@ -19,46 +19,6 @@ async function resetReservation(interview: Interview): Promise<void> {
   )
 }
 
-/**
- * 예약 블록을 확정 슬롯 크기로 분할.
- * 앞/뒤 남은 시간은 새 reserved 예약으로 생성.
- */
-async function splitAndConfirmReservation(
-  reservationId: string,
-  date: string,
-  confirmedStart: string,
-  confirmedEnd: string,
-  interviewId: string,
-): Promise<void> {
-  const dayReservations = await roomReservationRepository.findByDateRange(date, date)
-  const original = dayReservations.find((r) => r.id === reservationId)
-  if (!original) throw new Error('예약을 찾을 수 없습니다.')
-
-  // 분할 조각을 먼저 생성 — 실패해도 원본이 아직 confirmed로 변경되지 않아 불일치 없음
-  if (original.startTime < confirmedStart) {
-    await roomReservationRepository.create({
-      roomId: original.roomId, roomName: original.roomName, date,
-      startTime: original.startTime, endTime: confirmedStart,
-      status: 'reserved', interviewId: null,
-    })
-  }
-
-  if (confirmedEnd < original.endTime) {
-    await roomReservationRepository.create({
-      roomId: original.roomId, roomName: original.roomName, date,
-      startTime: confirmedEnd, endTime: original.endTime,
-      status: 'reserved', interviewId: null,
-    })
-  }
-
-  // 분할 생성 완료 후 원본을 확정으로 업데이트
-  await roomReservationRepository.update(reservationId, {
-    startTime: confirmedStart,
-    endTime: confirmedEnd,
-    status: 'confirmed',
-    interviewId,
-  })
-}
 
 export const INTERVIEWS_KEY = ['interviews']
 
@@ -232,15 +192,15 @@ export function useConfirmSchedule() {
       interviewId: string
       schedule: RecommendedSchedule
     }) => {
-      for (const slot of schedule.slots) {
-        await splitAndConfirmReservation(
-          slot.reservationId,
-          schedule.date,
-          slot.startTime,
-          slot.endTime,
+      await roomReservationRepository.confirmSlots(
+        schedule.slots.map((slot) => ({
+          reservationId: slot.reservationId,
+          date: schedule.date,
+          confirmedStart: slot.startTime,
+          confirmedEnd: slot.endTime,
           interviewId,
-        )
-      }
+        })),
+      )
 
       return interviewRepository.update(interviewId, {
         status: 'confirmed',

@@ -6,8 +6,9 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { DatePickerField } from '@/components/ui/date-picker'
+import { TimeSelectField } from '@/components/ui/time-select'
 import { Interview, AvailabilitySlot } from '@/domain/model/Interview'
 import { Interviewer } from '@/domain/model/Interviewer'
 import { useSubmitAvailability } from '@/application/usecase/interview/useInterviews'
@@ -110,35 +111,33 @@ export default function AvailabilityInputModal({ open, onOpenChange, interview, 
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">가능한 날짜/시간대</Label>
               {slots.map((slot, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Input
-                    type="date"
+                <div key={i} className="flex flex-col gap-1.5 rounded-lg border border-border p-2.5">
+                  <DatePickerField
                     value={slot.date}
+                    onChange={(v) => updateSlot(i, 'date', v)}
                     min={minDate}
                     max={maxDate}
-                    onChange={(e) => updateSlot(i, 'date', e.target.value)}
-                    className="flex-1"
                   />
-                  <Input
-                    type="time"
-                    value={slot.startTime}
-                    onChange={(e) => updateSlot(i, 'startTime', e.target.value)}
-                    className="w-28"
-                  />
-                  <span className="text-muted-foreground text-sm">~</span>
-                  <Input
-                    type="time"
-                    value={slot.endTime}
-                    onChange={(e) => updateSlot(i, 'endTime', e.target.value)}
-                    className="w-28"
-                  />
-                  <button
-                    onClick={() => removeSlot(i)}
-                    disabled={slots.length === 1}
-                    className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <TimeSelectField
+                      value={slot.startTime}
+                      onChange={(v) => updateSlot(i, 'startTime', v)}
+                      className="flex-1"
+                    />
+                    <span className="text-muted-foreground text-sm shrink-0">~</span>
+                    <TimeSelectField
+                      value={slot.endTime}
+                      onChange={(v) => updateSlot(i, 'endTime', v)}
+                      className="flex-1"
+                    />
+                    <button
+                      onClick={() => removeSlot(i)}
+                      disabled={slots.length === 1}
+                      className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30 shrink-0"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
               ))}
               <Button variant="outline" size="sm" onClick={addSlot} className="gap-1.5 mt-1">

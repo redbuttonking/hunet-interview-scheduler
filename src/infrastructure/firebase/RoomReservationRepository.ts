@@ -5,9 +5,11 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  getDoc,
   query,
   where,
   serverTimestamp,
+  writeBatch,
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
@@ -17,6 +19,7 @@ import {
   IRoomReservationRepository,
   CreateReservationInput,
   UpdateReservationInput,
+  ConfirmSlotInput,
 } from '@/domain/repository/IRoomReservationRepository'
 
 function toReservation(id: string, data: Record<string, unknown>): RoomReservation {
@@ -68,5 +71,50 @@ export const roomReservationRepository: IRoomReservationRepository = {
 
   async delete(id: string): Promise<void> {
     await deleteDoc(doc(db, COLLECTIONS.ROOM_RESERVATIONS, id))
+  },
+
+  async confirmSlots(slots: ConfirmSlotInput[]): Promise<void> {
+    const col = collection(db, COLLECTIONS.ROOM_RESERVATIONS)
+    const batch = writeBatch(db)
+
+    for (const slot of slots) {
+      const originalRef = doc(db, COLLECTIONS.ROOM_RESERVATIONS, slot.reservationId)
+      const originalSnap = await getDoc(originalRef)
+      if (!originalSnap.exists()) throw new Error(`예약을 찾을 수 없습니다: ${slot.reservationId}`)
+
+      const d = originalSnap.data() as Record<string, unknown>
+      const roomId = d.roomId as string
+      const roomName = d.roomName as string
+      const blockStart = d.startTime as string
+      const blockEnd = d.endTime as string
+
+      if (blockStart < slot.confirmedStart) {
+        batch.set(doc(col), {
+          roomId, roomName, date: slot.date,
+          startTime: blockStart, endTime: slot.confirmedStart,
+          status: 'reserved', interviewId: null,
+          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+        })
+      }
+
+      if (slot.confirmedEnd < blockEnd) {
+        batch.set(doc(col), {
+          roomId, roomName, date: slot.date,
+          startTime: slot.confirmedEnd, endTime: blockEnd,
+          status: 'reserved', interviewId: null,
+          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+        })
+      }
+
+      batch.update(originalRef, {
+        startTime: slot.confirmedStart,
+        endTime: slot.confirmedEnd,
+        status: 'confirmed',
+        interviewId: slot.interviewId,
+        updatedAt: serverTimestamp(),
+      })
+    }
+
+    await batch.commit()
   },
 }

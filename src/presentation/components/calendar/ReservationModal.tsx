@@ -6,6 +6,8 @@ import { Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { DatePickerField } from '@/components/ui/date-picker'
+import { TimeSelectField } from '@/components/ui/time-select'
 import { cn } from '@/lib/utils'
 import { RoomReservation, ReservationStatus } from '@/domain/model/Room'
 import { Room } from '@/domain/model/Room'
@@ -165,42 +167,18 @@ export default function ReservationModal({
           {/* 날짜 */}
           <div className="flex flex-col gap-1.5">
             <Label>날짜</Label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-              required
-            />
+            <DatePickerField value={date} onChange={setDate} />
           </div>
 
           {/* 시간 */}
           <div className="flex gap-3">
             <div className="flex-1 flex flex-col gap-1.5">
               <Label>시작</Label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                min="09:00"
-                max="18:00"
-                step="1800"
-                className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                required
-              />
+              <TimeSelectField value={startTime} onChange={setStartTime} />
             </div>
             <div className="flex-1 flex flex-col gap-1.5">
               <Label>종료</Label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                min="09:00"
-                max="18:00"
-                step="1800"
-                className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                required
-              />
+              <TimeSelectField value={endTime} onChange={setEndTime} />
             </div>
           </div>
 
