@@ -54,6 +54,14 @@ export default function AvailabilityInputModal({ open, onOpenChange, interview, 
       return toast.error('날짜와 시간을 올바르게 입력해주세요. (종료 시간이 시작 시간보다 늦어야 합니다)')
     }
 
+    // HTML min/max는 직접 입력 시 우회 가능 — 서버 전송 전 범위 재검증
+    if (!allAvailable && period) {
+      const outOfRange = slots.find((s) => s.date < period.startDate || s.date > period.endDate)
+      if (outOfRange) {
+        return toast.error(`날짜는 요청 기간(${period.startDate} ~ ${period.endDate}) 내에 입력해주세요.`)
+      }
+    }
+
     try {
       await submit.mutateAsync({
         interviewId: interview.id,

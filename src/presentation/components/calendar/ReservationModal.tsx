@@ -108,8 +108,11 @@ export default function ReservationModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const startMins = timeToMins(startTime)
-    const endMins = timeToMins(endTime)
+    // 30분 단위로 정규화 (HTML step 속성은 직접 입력 시 우회 가능)
+    const normalizedStart = roundToHalfHour(startTime)
+    const normalizedEnd = roundToHalfHour(endTime)
+    const startMins = timeToMins(normalizedStart)
+    const endMins = timeToMins(normalizedEnd)
     if (endMins <= startMins) {
       toast.error('종료 시간이 시작 시간보다 늦어야 합니다.')
       return
@@ -120,8 +123,8 @@ export default function ReservationModal({
       roomId,
       roomName: room.name,
       date,
-      startTime,
-      endTime,
+      startTime: normalizedStart,
+      endTime: normalizedEnd,
       status,
       interviewId: reservation?.interviewId ?? null,
     })

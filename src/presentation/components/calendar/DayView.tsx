@@ -296,8 +296,8 @@ export default function DayView({
                       )
                     })}
 
-                    {/* 드래그 미리보기 */}
-                    {dragging && dragEnd - dragStart >= 15 && (
+                    {/* 드래그 미리보기 — 실제 저장 기준(30분)과 동일하게 */}
+                    {dragging && dragEnd - dragStart >= 30 && (
                       <div
                         className="absolute top-2 bottom-2 rounded-md border border-primary/50 bg-primary/15 pointer-events-none z-20"
                         style={{

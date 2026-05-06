@@ -16,8 +16,7 @@ export function useRoomReservations(startDate: string, endDate: string) {
   })
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function useCreateReservation(_startDate: string, _endDate: string) {
+export function useCreateReservation(_startDate?: string, _endDate?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateReservationInput) => roomReservationRepository.create(input),
@@ -25,8 +24,7 @@ export function useCreateReservation(_startDate: string, _endDate: string) {
   })
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function useUpdateReservation(_startDate: string, _endDate: string) {
+export function useUpdateReservation(_startDate?: string, _endDate?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateReservationInput }) =>

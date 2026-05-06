@@ -34,13 +34,7 @@ async function splitAndConfirmReservation(
   const original = dayReservations.find((r) => r.id === reservationId)
   if (!original) throw new Error('예약을 찾을 수 없습니다.')
 
-  await roomReservationRepository.update(reservationId, {
-    startTime: confirmedStart,
-    endTime: confirmedEnd,
-    status: 'confirmed',
-    interviewId,
-  })
-
+  // 분할 조각을 먼저 생성 — 실패해도 원본이 아직 confirmed로 변경되지 않아 불일치 없음
   if (original.startTime < confirmedStart) {
     await roomReservationRepository.create({
       roomId: original.roomId, roomName: original.roomName, date,
@@ -56,6 +50,14 @@ async function splitAndConfirmReservation(
       status: 'reserved', interviewId: null,
     })
   }
+
+  // 분할 생성 완료 후 원본을 확정으로 업데이트
+  await roomReservationRepository.update(reservationId, {
+    startTime: confirmedStart,
+    endTime: confirmedEnd,
+    status: 'confirmed',
+    interviewId,
+  })
 }
 
 export const INTERVIEWS_KEY = ['interviews']
@@ -91,7 +93,11 @@ export function useDeleteInterview() {
       await resetReservation(interview)
       return interviewRepository.delete(interview.id)
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INTERVIEWS_KEY })
+      // resetReservation이 예약 상태를 변경하므로 캘린더도 갱신
+      qc.invalidateQueries({ queryKey: ['reservations'] })
+    },
   })
 }
 
