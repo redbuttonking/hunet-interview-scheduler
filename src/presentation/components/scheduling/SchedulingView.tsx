@@ -55,13 +55,7 @@ export default function SchedulingView() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterPosition, setFilterPosition] = useState<string>('all')
 
-  // 포지션 목록 (중복 제거)
-  const positions = useMemo(
-    () => Array.from(new Set(interviews.map((iv) => iv.positionName))).sort(),
-    [interviews],
-  )
-
-  // 상태별 건수
+  // 상태별 건수 (포지션 필터와 무관하게 전체 카운트)
   const statusCounts = useMemo(
     () =>
       interviews.reduce(
@@ -71,6 +65,14 @@ export default function SchedulingView() {
     [interviews],
   )
 
+  // 현재 상태 필터 기준 포지션 목록 — 해당 상태에 없는 포지션은 버튼으로 노출 안 함
+  const positions = useMemo(() => {
+    const statusFiltered = filterStatus === 'all'
+      ? interviews
+      : interviews.filter((iv) => iv.status === filterStatus)
+    return Array.from(new Set(statusFiltered.map((iv) => iv.positionName))).sort()
+  }, [interviews, filterStatus])
+
   const filteredInterviews = useMemo(
     () =>
       interviews
@@ -78,6 +80,12 @@ export default function SchedulingView() {
         .filter((iv) => filterPosition === 'all' || iv.positionName === filterPosition),
     [interviews, filterStatus, filterPosition],
   )
+
+  // 상태 필터 변경 시 현재 포지션이 새 목록에 없으면 초기화
+  function handleStatusFilter(value: FilterStatus) {
+    setFilterStatus(value)
+    setFilterPosition('all')
+  }
 
   function getInterviewer(id: string) {
     return interviewers.find((iv) => iv.id === id)
@@ -138,7 +146,7 @@ export default function SchedulingView() {
               return (
                 <button
                   key={opt.value}
-                  onClick={() => setFilterStatus(opt.value)}
+                  onClick={() => handleStatusFilter(opt.value)}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
                     isActive

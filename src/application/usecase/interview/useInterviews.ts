@@ -195,11 +195,21 @@ export function useUpdateConfirmedReservation() {
         return slot
       })
 
+      // 세션 시간 변경 후 순서가 달라질 수 있으므로 min/max로 전체 범위 재계산
+      const summaryStart = updatedSlots.reduce(
+        (min, s) => (s.startTime < min ? s.startTime : min),
+        updatedSlots[0].startTime,
+      )
+      const summaryEnd = updatedSlots.reduce(
+        (max, s) => (s.endTime > max ? s.endTime : max),
+        updatedSlots[0].endTime,
+      )
+
       await interviewRepository.update(oldRes.interviewId, {
         confirmedSlot: {
           date: input.date ?? interview.confirmedSlot.date,
-          startTime: updatedSlots[0].startTime,
-          endTime: updatedSlots[updatedSlots.length - 1].endTime,
+          startTime: summaryStart,
+          endTime: summaryEnd,
           slots: updatedSlots,
         },
       })
