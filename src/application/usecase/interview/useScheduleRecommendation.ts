@@ -4,6 +4,9 @@ import { Round } from '@/domain/model/Position'
 import { recommendSchedules, RecommendedSchedule } from '@/domain/service/ScheduleRecommendService'
 import { useRoomReservations } from '@/application/usecase/room/useRoomReservations'
 
+// presentation이 domain/service에 직접 의존하지 않도록 타입을 application 계층에서 재공개
+export type { RecommendedSchedule }
+
 /** 인터뷰 일정 추천 결과와 로딩 상태를 반환하는 훅 */
 export function useRecommendedSchedules(interview: Interview): {
   schedules: RecommendedSchedule[]

@@ -23,6 +23,6 @@ export interface IInterviewRepository {
   findAll(): Promise<Interview[]>
   findById(id: string): Promise<Interview | null>
   create(input: CreateInterviewInput): Promise<Interview>
-  update(id: string, input: UpdateInterviewInput): Promise<Interview>
+  update(id: string, input: UpdateInterviewInput): Promise<void>
   delete(id: string): Promise<void>
 }

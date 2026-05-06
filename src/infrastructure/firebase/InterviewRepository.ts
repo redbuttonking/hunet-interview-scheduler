@@ -67,11 +67,8 @@ class InterviewFirestoreRepository implements IInterviewRepository {
     }
   }
 
-  async update(id: string, input: UpdateInterviewInput): Promise<Interview> {
-    const ref = doc(db, COLLECTIONS.INTERVIEWS, id)
-    await updateDoc(ref, { ...input, updatedAt: serverTimestamp() })
-    const snap = await getDoc(ref)
-    return toInterview(snap.id, snap.data() as Record<string, unknown>)
+  async update(id: string, input: UpdateInterviewInput): Promise<void> {
+    await updateDoc(doc(db, COLLECTIONS.INTERVIEWS, id), { ...input, updatedAt: serverTimestamp() })
   }
 
   async delete(id: string): Promise<void> {

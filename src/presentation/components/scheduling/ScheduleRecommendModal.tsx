@@ -9,8 +9,7 @@ import { cn } from '@/lib/utils'
 import { Interview } from '@/domain/model/Interview'
 import { Round } from '@/domain/model/Position'
 import { useConfirmSchedule } from '@/application/usecase/interview/useInterviews'
-import { useRecommendedSchedules } from '@/application/usecase/interview/useScheduleRecommendation'
-import { RecommendedSchedule } from '@/domain/service/ScheduleRecommendService'
+import { useRecommendedSchedules, RecommendedSchedule } from '@/application/usecase/interview/useScheduleRecommendation'
 
 interface Props {
   open: boolean
