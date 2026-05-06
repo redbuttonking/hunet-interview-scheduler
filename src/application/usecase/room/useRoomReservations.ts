@@ -16,20 +16,22 @@ export function useRoomReservations(startDate: string, endDate: string) {
   })
 }
 
-export function useCreateReservation(startDate: string, endDate: string) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useCreateReservation(_startDate: string, _endDate: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateReservationInput) => roomReservationRepository.create(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: RESERVATIONS_KEY(startDate, endDate) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reservations'] }),
   })
 }
 
-export function useUpdateReservation(startDate: string, endDate: string) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useUpdateReservation(_startDate: string, _endDate: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateReservationInput }) =>
       roomReservationRepository.update(id, input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: RESERVATIONS_KEY(startDate, endDate) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reservations'] }),
   })
 }
 

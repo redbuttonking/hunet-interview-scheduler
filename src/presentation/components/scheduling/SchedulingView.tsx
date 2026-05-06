@@ -160,35 +160,37 @@ export default function SchedulingView() {
             })}
           </div>
 
-          {/* 포지션 필터 */}
+          {/* 포지션 필터 — 포지션이 많아도 가로 스크롤로 수용 */}
           {positions.length > 1 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground font-medium">포지션</span>
-              <button
-                onClick={() => setFilterPosition('all')}
-                className={cn(
-                  'px-2.5 py-1 rounded-md text-xs font-medium border transition-colors',
-                  filterPosition === 'all'
-                    ? 'bg-foreground text-background border-foreground'
-                    : 'bg-background text-muted-foreground border-border hover:border-foreground/30',
-                )}
-              >
-                전체
-              </button>
-              {positions.map((pos) => (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium shrink-0">포지션</span>
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin pb-0.5">
                 <button
-                  key={pos}
-                  onClick={() => setFilterPosition(pos)}
+                  onClick={() => setFilterPosition('all')}
                   className={cn(
-                    'px-2.5 py-1 rounded-md text-xs font-medium border transition-colors',
-                    filterPosition === pos
+                    'shrink-0 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors',
+                    filterPosition === 'all'
                       ? 'bg-foreground text-background border-foreground'
                       : 'bg-background text-muted-foreground border-border hover:border-foreground/30',
                   )}
                 >
-                  {pos}
+                  전체
                 </button>
-              ))}
+                {positions.map((pos) => (
+                  <button
+                    key={pos}
+                    onClick={() => setFilterPosition(pos)}
+                    className={cn(
+                      'shrink-0 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors',
+                      filterPosition === pos
+                        ? 'bg-foreground text-background border-foreground'
+                        : 'bg-background text-muted-foreground border-border hover:border-foreground/30',
+                    )}
+                  >
+                    {pos}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
