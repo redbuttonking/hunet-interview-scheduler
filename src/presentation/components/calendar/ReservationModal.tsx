@@ -40,6 +40,8 @@ interface Props {
     startTime: string
     endTime: string
   } | null
+  /** 확정 인터뷰 예약일 때 표시할 후보자명 */
+  candidateName?: string
   onSave: (data: {
     roomId: string
     roomName: string
@@ -60,12 +62,14 @@ export default function ReservationModal({
   rooms,
   reservation,
   draft,
+  candidateName,
   onSave,
   onDelete,
   isSaving,
   isDeleting,
 }: Props) {
   const isEdit = reservation !== null
+  const isConfirmedInterview = isEdit && !!reservation.interviewId && reservation.status === 'confirmed'
 
   const [roomId, setRoomId] = useState('')
   const [date, setDate] = useState('')
@@ -132,6 +136,13 @@ export default function ReservationModal({
           <DialogTitle>{isEdit ? '예약 수정' : '예약 추가'}</DialogTitle>
         </DialogHeader>
 
+        {/* 확정 인터뷰 안내 */}
+        {isConfirmedInterview && candidateName && (
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800">
+            확정된 인터뷰 예약입니다 — <span className="font-semibold">{candidateName}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-1">
           {/* 회의실 */}
           <div className="flex flex-col gap-1.5">
@@ -190,27 +201,29 @@ export default function ReservationModal({
             </div>
           </div>
 
-          {/* 상태 */}
-          <div className="flex flex-col gap-1.5">
-            <Label>상태</Label>
-            <div className="flex gap-2">
-              {STATUS_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setStatus(opt.value)}
-                  className={cn(
-                    'flex-1 py-1.5 rounded-md text-xs font-medium border transition-colors',
-                    status === opt.value
-                      ? opt.color
-                      : 'bg-background text-muted-foreground border-border hover:border-primary/40',
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
+          {/* 상태 (확정 인터뷰는 상태 변경 불가) */}
+          {!isConfirmedInterview && (
+            <div className="flex flex-col gap-1.5">
+              <Label>상태</Label>
+              <div className="flex gap-2">
+                {STATUS_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setStatus(opt.value)}
+                    className={cn(
+                      'flex-1 py-1.5 rounded-md text-xs font-medium border transition-colors',
+                      status === opt.value
+                        ? opt.color
+                        : 'bg-background text-muted-foreground border-border hover:border-primary/40',
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 버튼 */}
           <div className="flex items-center justify-between pt-1">

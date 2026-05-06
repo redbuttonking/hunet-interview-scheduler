@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,16 @@ const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string 
   ready_to_schedule: { label: '일정 추천 가능', className: 'bg-emerald-50 text-emerald-700' },
   confirmed: { label: '확정', className: 'bg-primary/10 text-primary' },
 }
+
+type FilterStatus = 'all' | InterviewStatus
+
+const FILTER_OPTIONS: { value: FilterStatus; label: string }[] = [
+  { value: 'all', label: '전체' },
+  { value: 'pending_slack', label: '슬랙 발송 전' },
+  { value: 'collecting', label: '수집 중' },
+  { value: 'ready_to_schedule', label: '일정 추천 가능' },
+  { value: 'confirmed', label: '확정' },
+]
 
 interface AvailabilityModalState {
   interview: Interview
@@ -41,6 +51,33 @@ export default function SchedulingView() {
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
   const [recommendModal, setRecommendModal] = useState<RecommendModalState | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Interview | null>(null)
+
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+  const [filterPosition, setFilterPosition] = useState<string>('all')
+
+  // 포지션 목록 (중복 제거)
+  const positions = useMemo(
+    () => Array.from(new Set(interviews.map((iv) => iv.positionName))).sort(),
+    [interviews],
+  )
+
+  // 상태별 건수
+  const statusCounts = useMemo(
+    () =>
+      interviews.reduce(
+        (acc, iv) => ({ ...acc, [iv.status]: (acc[iv.status] ?? 0) + 1 }),
+        {} as Partial<Record<InterviewStatus, number>>,
+      ),
+    [interviews],
+  )
+
+  const filteredInterviews = useMemo(
+    () =>
+      interviews
+        .filter((iv) => filterStatus === 'all' || iv.status === filterStatus)
+        .filter((iv) => filterPosition === 'all' || iv.positionName === filterPosition),
+    [interviews, filterStatus, filterPosition],
+  )
 
   function getInterviewer(id: string) {
     return interviewers.find((iv) => iv.id === id)
@@ -90,6 +127,73 @@ export default function SchedulingView() {
         </Button>
       </div>
 
+      {/* 필터 */}
+      {!isLoading && interviews.length > 0 && (
+        <div className="flex flex-col gap-3 mb-2">
+          {/* 상태 필터 */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {FILTER_OPTIONS.map((opt) => {
+              const count = opt.value === 'all' ? interviews.length : (statusCounts[opt.value as InterviewStatus] ?? 0)
+              const isActive = filterStatus === opt.value
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => setFilterStatus(opt.value)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
+                    isActive
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground',
+                  )}
+                >
+                  {opt.label}
+                  <span
+                    className={cn(
+                      'text-xs px-1.5 py-0.5 rounded-full font-semibold',
+                      isActive ? 'bg-white/20' : 'bg-muted',
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* 포지션 필터 */}
+          {positions.length > 1 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground font-medium">포지션</span>
+              <button
+                onClick={() => setFilterPosition('all')}
+                className={cn(
+                  'px-2.5 py-1 rounded-md text-xs font-medium border transition-colors',
+                  filterPosition === 'all'
+                    ? 'bg-foreground text-background border-foreground'
+                    : 'bg-background text-muted-foreground border-border hover:border-foreground/30',
+                )}
+              >
+                전체
+              </button>
+              {positions.map((pos) => (
+                <button
+                  key={pos}
+                  onClick={() => setFilterPosition(pos)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-md text-xs font-medium border transition-colors',
+                    filterPosition === pos
+                      ? 'bg-foreground text-background border-foreground'
+                      : 'bg-background text-muted-foreground border-border hover:border-foreground/30',
+                  )}
+                >
+                  {pos}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 로딩 */}
       {isLoading && (
         <div className="py-16 flex flex-col items-center gap-2 text-muted-foreground">
@@ -111,10 +215,17 @@ export default function SchedulingView() {
         </div>
       )}
 
+      {/* 필터 결과 없음 */}
+      {!isLoading && interviews.length > 0 && filteredInterviews.length === 0 && (
+        <div className="py-12 flex flex-col items-center gap-2 text-muted-foreground">
+          <p className="text-sm">해당 조건의 인터뷰 조율 건이 없습니다.</p>
+        </div>
+      )}
+
       {/* 카드 목록 */}
-      {!isLoading && interviews.length > 0 && (
+      {!isLoading && filteredInterviews.length > 0 && (
         <div className="space-y-3">
-          {interviews.map((interview) => {
+          {filteredInterviews.map((interview) => {
             const cfg = STATUS_CONFIG[interview.status]
             const submittedIds = new Set(interview.availabilities.map((a) => a.interviewerId))
             const period = interview.availabilityPeriod

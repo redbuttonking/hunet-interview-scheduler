@@ -12,7 +12,7 @@ import {
   useUpdateReservation,
   useDeleteReservation,
 } from '@/application/usecase/room/useRoomReservations'
-import { useInterviews } from '@/application/usecase/interview/useInterviews'
+import { useInterviews, useUpdateConfirmedReservation } from '@/application/usecase/interview/useInterviews'
 import { hasTimeOverlap } from '@/lib/reservationUtils'
 import WeekView from './WeekView'
 import DayView from './DayView'
@@ -53,6 +53,7 @@ export default function CalendarView() {
   const createRes = useCreateReservation(startDate, endDate)
   const updateRes = useUpdateReservation(startDate, endDate)
   const deleteRes = useDeleteReservation(startDate, endDate)
+  const updateConfirmedRes = useUpdateConfirmedReservation()
 
   function goToDay(date: Date) {
     setSelectedDate(date)
@@ -82,6 +83,10 @@ export default function CalendarView() {
     setModalOpen(true)
   }
 
+  function isConfirmedInterview(res: RoomReservation) {
+    return res.status === 'confirmed' && res.interviewId !== null
+  }
+
   async function handleSave(data: CreateReservationInput) {
     if (
       hasTimeOverlap(
@@ -99,7 +104,12 @@ export default function CalendarView() {
 
     try {
       if (editingReservation) {
-        await updateRes.mutateAsync({ id: editingReservation.id, input: data })
+        if (isConfirmedInterview(editingReservation)) {
+          // 확정 인터뷰: 예약 + confirmedSlot 동시 업데이트
+          await updateConfirmedRes.mutateAsync({ old: editingReservation, input: data })
+        } else {
+          await updateRes.mutateAsync({ id: editingReservation.id, input: data })
+        }
         toast.success('예약이 수정되었습니다.')
       } else {
         await createRes.mutateAsync(data)
@@ -113,6 +123,10 @@ export default function CalendarView() {
 
   async function handleDelete() {
     if (!editingReservation) return
+    if (isConfirmedInterview(editingReservation)) {
+      toast.error('확정된 인터뷰 예약은 삭제할 수 없습니다. 일정 조율에서 확정을 취소해 주세요.')
+      return
+    }
     try {
       await deleteRes.mutateAsync(editingReservation.id)
       toast.success('예약이 삭제되었습니다.')
@@ -164,9 +178,14 @@ export default function CalendarView() {
           rooms={rooms}
           reservation={editingReservation}
           draft={modalDraft}
+          candidateName={
+            editingReservation?.interviewId
+              ? interviewMap[editingReservation.interviewId]
+              : undefined
+          }
           onSave={handleSave}
           onDelete={handleDelete}
-          isSaving={createRes.isPending || updateRes.isPending}
+          isSaving={createRes.isPending || updateRes.isPending || updateConfirmedRes.isPending}
           isDeleting={deleteRes.isPending}
         />
       </div>

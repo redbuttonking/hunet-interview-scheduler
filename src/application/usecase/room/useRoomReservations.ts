@@ -37,6 +37,9 @@ export function useDeleteReservation(startDate: string, endDate: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => roomReservationRepository.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: RESERVATIONS_KEY(startDate, endDate) }),
+    onSuccess: () => {
+      // 날짜 범위에 상관없이 모든 예약 캐시 무효화 (일정 추천 즉시 반영)
+      qc.invalidateQueries({ queryKey: ['reservations'] })
+    },
   })
 }

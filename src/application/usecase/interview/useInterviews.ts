@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { interviewRepository } from '@/infrastructure/firebase/InterviewRepository'
 import { roomReservationRepository } from '@/infrastructure/firebase/RoomReservationRepository'
 import { CreateInterviewInput, UpdateInterviewInput } from '@/domain/repository/IInterviewRepository'
+import { UpdateReservationInput } from '@/domain/repository/IRoomReservationRepository'
 import { Interview, InterviewerAvailability } from '@/domain/model/Interview'
+import { RoomReservation } from '@/domain/model/Room'
 import { RecommendedSchedule } from '@/domain/service/ScheduleRecommendService'
 
 async function resetReservation(interview: Interview): Promise<void> {
@@ -148,6 +150,58 @@ export function useSendSlack() {
     mutationFn: (interviewId: string) =>
       interviewRepository.update(interviewId, { status: 'collecting' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
+  })
+}
+
+/**
+ * 캘린더에서 확정된 인터뷰 예약 수정.
+ * RoomReservation 업데이트 + Interview.confirmedSlot 동기화.
+ */
+export function useUpdateConfirmedReservation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      old: oldRes,
+      input,
+    }: {
+      old: RoomReservation
+      input: UpdateReservationInput
+    }) => {
+      await roomReservationRepository.update(oldRes.id, input)
+
+      if (!oldRes.interviewId) return
+      const interview = await interviewRepository.findById(oldRes.interviewId)
+      if (!interview?.confirmedSlot) return
+
+      const updatedSlots = interview.confirmedSlot.slots.map((slot) => {
+        if (
+          slot.startTime === oldRes.startTime &&
+          slot.endTime === oldRes.endTime &&
+          slot.roomId === oldRes.roomId
+        ) {
+          return {
+            startTime: input.startTime ?? slot.startTime,
+            endTime: input.endTime ?? slot.endTime,
+            roomId: input.roomId ?? slot.roomId,
+            roomName: input.roomName ?? slot.roomName,
+          }
+        }
+        return slot
+      })
+
+      await interviewRepository.update(oldRes.interviewId, {
+        confirmedSlot: {
+          date: input.date ?? interview.confirmedSlot.date,
+          startTime: updatedSlots[0].startTime,
+          endTime: updatedSlots[updatedSlots.length - 1].endTime,
+          slots: updatedSlots,
+        },
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INTERVIEWS_KEY })
+      qc.invalidateQueries({ queryKey: ['reservations'] })
+    },
   })
 }
 
