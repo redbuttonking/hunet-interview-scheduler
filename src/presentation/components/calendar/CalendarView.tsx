@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { startOfWeek, addDays, format } from 'date-fns'
 import { RoomReservation } from '@/domain/model/Room'
@@ -12,6 +12,7 @@ import {
   useUpdateReservation,
   useDeleteReservation,
 } from '@/application/usecase/room/useRoomReservations'
+import { useInterviews } from '@/application/usecase/interview/useInterviews'
 import { hasTimeOverlap } from '@/lib/reservationUtils'
 import WeekView from './WeekView'
 import DayView from './DayView'
@@ -41,6 +42,13 @@ export default function CalendarView() {
 
   const { data: rooms = [] } = useRooms()
   const { data: reservations = [] } = useRoomReservations(startDate, endDate)
+  const { data: interviews = [] } = useInterviews()
+
+  // interviewId → 후보자명 맵 (확정 예약 블록에 후보자명 표시용)
+  const interviewMap = useMemo(
+    () => Object.fromEntries(interviews.map((iv) => [iv.id, iv.candidateName])),
+    [interviews],
+  )
 
   const createRes = useCreateReservation(startDate, endDate)
   const updateRes = useUpdateReservation(startDate, endDate)
@@ -130,6 +138,7 @@ export default function CalendarView() {
             days={days}
             rooms={rooms}
             reservations={reservations}
+            interviewMap={interviewMap}
             weekStart={weekStart}
             onWeekChange={setWeekStart}
             onDayClick={goToDay}
@@ -141,6 +150,7 @@ export default function CalendarView() {
             date={selectedDate}
             rooms={rooms}
             reservations={reservations}
+            interviewMap={interviewMap}
             onDateChange={handleDayDateChange}
             onWeekView={() => setMode('week')}
             onCreateDraft={openCreateModal}

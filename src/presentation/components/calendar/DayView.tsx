@@ -52,6 +52,8 @@ interface Props {
   date: Date
   rooms: Room[]
   reservations: RoomReservation[]
+  /** interviewId → 후보자명 맵 */
+  interviewMap: Record<string, string>
   onDateChange: (date: Date) => void
   onWeekView: () => void
   onCreateDraft: (draft: { roomId: string; date: string; startTime: string; endTime: string }) => void
@@ -62,6 +64,7 @@ export default function DayView({
   date,
   rooms,
   reservations,
+  interviewMap,
   onDateChange,
   onWeekView,
   onCreateDraft,
@@ -263,6 +266,7 @@ export default function DayView({
                       const leftPct   = minsToPct(startMins)
                       const widthPct  = ((endMins - startMins) / DAY_RANGE) * 100
                       const style     = STATUS_STYLE[res.status]
+                      const candidateName = res.interviewId ? interviewMap[res.interviewId] : null
 
                       return (
                         <div
@@ -285,7 +289,7 @@ export default function DayView({
                               {res.startTime} ~ {res.endTime}
                             </p>
                             <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
-                              {STATUS_LABEL[res.status]}
+                              {candidateName ?? STATUS_LABEL[res.status]}
                             </p>
                           </div>
                         </div>

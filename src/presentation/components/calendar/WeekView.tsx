@@ -29,6 +29,8 @@ interface Props {
   days: Date[]
   rooms: Room[]
   reservations: RoomReservation[]
+  /** interviewId → 후보자명 맵 */
+  interviewMap: Record<string, string>
   weekStart: Date
   onWeekChange: (date: Date) => void
   onDayClick: (date: Date) => void
@@ -40,6 +42,7 @@ export default function WeekView({
   days,
   rooms,
   reservations,
+  interviewMap,
   weekStart,
   onWeekChange,
   onDayClick,
@@ -187,21 +190,24 @@ export default function WeekView({
                       onClick={() => onDayClick(d)}
                     >
                       <div className="flex flex-col gap-1">
-                        {cellRes.slice(0, 3).map((res) => (
-                          <div
-                            key={res.id}
-                            className={cn(
-                              'rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate cursor-pointer',
-                              STATUS_PILL[res.status],
-                            )}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onEditReservation(res)
-                            }}
-                          >
-                            {res.startTime}–{res.endTime}
-                          </div>
-                        ))}
+                        {cellRes.slice(0, 3).map((res) => {
+                          const candidateName = res.interviewId ? interviewMap[res.interviewId] : null
+                          return (
+                            <div
+                              key={res.id}
+                              className={cn(
+                                'rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate cursor-pointer',
+                                STATUS_PILL[res.status],
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onEditReservation(res)
+                              }}
+                            >
+                              {candidateName ?? `${res.startTime}–${res.endTime}`}
+                            </div>
+                          )
+                        })}
                         {cellRes.length > 3 && (
                           <span className="text-[10px] font-semibold text-muted-foreground pl-1">
                             +{cellRes.length - 3}
