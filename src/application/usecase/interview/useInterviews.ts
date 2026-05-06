@@ -103,7 +103,10 @@ export function useRevertConfirmation() {
         confirmedSlot: null,
       })
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INTERVIEWS_KEY })
+      qc.invalidateQueries({ queryKey: ['reservations'] })
+    },
   })
 }
 
@@ -184,6 +187,9 @@ export function useConfirmSchedule() {
         },
       })
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INTERVIEWS_KEY })
+      qc.invalidateQueries({ queryKey: ['reservations'] })
+    },
   })
 }
