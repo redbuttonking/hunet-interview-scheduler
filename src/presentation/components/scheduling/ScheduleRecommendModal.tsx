@@ -7,10 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Interview } from '@/domain/model/Interview'
-import { Round, ALL_ROUNDS } from '@/domain/model/Position'
-import { useRoomReservations } from '@/application/usecase/room/useRoomReservations'
+import { Round } from '@/domain/model/Position'
 import { useConfirmSchedule } from '@/application/usecase/interview/useInterviews'
-import { recommendSchedules, RecommendedSchedule } from '@/domain/service/ScheduleRecommendService'
+import { useRecommendedSchedules } from '@/application/usecase/interview/useScheduleRecommendation'
+import { RecommendedSchedule } from '@/domain/service/ScheduleRecommendService'
 
 interface Props {
   open: boolean
@@ -37,29 +37,8 @@ function sessionLabel(rounds: Round[]): string {
 }
 
 export default function ScheduleRecommendModal({ open, onOpenChange, interview }: Props) {
-  const period = interview.availabilityPeriod
   const confirmSchedule = useConfirmSchedule()
-
-  const { data: reservations = [], isLoading } = useRoomReservations(
-    period?.startDate ?? '',
-    period?.endDate ?? '',
-  )
-
-  // 세션별 필요 면접관 계산
-  const sessionSpecs = useMemo(() =>
-    interview.sessions.map((session) => {
-      const ids = [...new Set(
-        session.rounds.flatMap((r) => interview.interviewersByRound[r] ?? []),
-      )].filter((id) => interview.interviewerIds.includes(id))
-      return { interviewerIds: ids }
-    }),
-    [interview],
-  )
-
-  const rawSchedules = useMemo(
-    () => recommendSchedules(sessionSpecs, interview.availabilities, reservations),
-    [sessionSpecs, interview.availabilities, reservations],
-  )
+  const { schedules: rawSchedules, isLoading } = useRecommendedSchedules(interview)
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState<SortType>('time')

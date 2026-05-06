@@ -46,6 +46,7 @@ class InterviewFirestoreRepository implements IInterviewRepository {
   }
 
   async create(input: CreateInterviewInput): Promise<Interview> {
+    const now = new Date()
     const ref = await addDoc(this.col, {
       ...input,
       status: 'pending_slack',
@@ -54,8 +55,16 @@ class InterviewFirestoreRepository implements IInterviewRepository {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
-    const snap = await getDoc(ref)
-    return toInterview(snap.id, snap.data() as Record<string, unknown>)
+    // onSuccess에서 캐시를 즉시 무효화하므로 재조회 불필요 — 로컬 시간으로 반환
+    return {
+      id: ref.id,
+      ...input,
+      status: 'pending_slack',
+      availabilities: [],
+      confirmedSlot: null,
+      createdAt: now,
+      updatedAt: now,
+    }
   }
 
   async update(id: string, input: UpdateInterviewInput): Promise<Interview> {
