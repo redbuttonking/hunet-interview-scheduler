@@ -169,9 +169,10 @@ export default function DayView({
         <Button
           size="sm"
           className="gap-1.5"
+          disabled={rooms.length === 0}
           onClick={() =>
             onCreateDraft({
-              roomId: rooms[0]?.id ?? '',
+              roomId: rooms[0].id,
               date: dateStr,
               startTime: '10:00',
               endTime: '11:00',

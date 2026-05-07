@@ -15,6 +15,7 @@ export interface CreateInterviewInput {
 export interface UpdateInterviewInput {
   status?: InterviewStatus
   interviewerIds?: string[]
+  interviewersByRound?: Partial<Record<Round, string[]>>
   availabilities?: InterviewerAvailability[]
   confirmedSlot?: Interview['confirmedSlot']
 }
