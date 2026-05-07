@@ -39,7 +39,7 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
   const confirmSchedule = useConfirmSchedule()
   const { schedules: rawSchedules, isLoading } = useRecommendedSchedules(interview)
 
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selectedSchedule, setSelectedSchedule] = useState<RecommendedSchedule | null>(null)
   const [sortBy, setSortBy] = useState<SortType>('time')
 
   const schedules = useMemo(() => {
@@ -48,8 +48,6 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
       ? copy.sort((a, b) => (a.date + a.slots[0].startTime).localeCompare(b.date + b.slots[0].startTime))
       : copy.sort((a, b) => a.slots[0].roomName.localeCompare(b.slots[0].roomName) || (a.date + a.slots[0].startTime).localeCompare(b.date + b.slots[0].startTime))
   }, [rawSchedules, sortBy])
-
-  const selectedSchedule: RecommendedSchedule | null = selectedIndex !== null ? schedules[selectedIndex] ?? null : null
 
   async function handleConfirm() {
     if (!selectedSchedule) return toast.error('슬롯을 선택해주세요.')
@@ -99,7 +97,7 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
                     <button
                       key={type}
                       type="button"
-                      onClick={() => { setSortBy(type); setSelectedIndex(null) }}
+                      onClick={() => setSortBy(type)}
                       className={cn(
                         'px-3 py-1 rounded-md text-xs font-medium transition-colors',
                         sortBy === type
@@ -115,12 +113,12 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
 
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                 {schedules.map((schedule, i) => {
-                  const selected = selectedIndex === i
+                  const selected = selectedSchedule === schedule
                   return (
                     <button
                       key={i}
                       type="button"
-                      onClick={() => setSelectedIndex(i)}
+                      onClick={() => setSelectedSchedule(schedule)}
                       className={cn(
                         'w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-all',
                         selected

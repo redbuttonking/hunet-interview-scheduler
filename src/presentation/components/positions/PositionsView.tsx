@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { Position, Round, ALL_ROUNDS } from '@/domain/model/Position'
 import { usePositions, useDeletePosition } from '@/application/usecase/position/usePositions'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
+import { useInterviews } from '@/application/usecase/interview/useInterviews'
 import PositionModal from './PositionModal'
 
 const ROUND_COLORS: Record<Round, string> = {
@@ -27,6 +28,7 @@ const ROUND_TEXT_COLORS: Record<Round, string> = {
 export default function PositionsView() {
   const { data: positions = [], isLoading } = usePositions()
   const { data: interviewers = [] } = useInterviewers()
+  const { data: interviews = [] } = useInterviews()
   const deletePosition = useDeletePosition()
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -59,7 +61,7 @@ export default function PositionsView() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-5xl">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -147,7 +149,7 @@ export default function PositionsView() {
                 </div>
 
                 {/* 인터뷰 유형 */}
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5 flex-1">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">인터뷰 유형</p>
                   <div className="flex flex-col gap-1">
                     {pos.interviewTypes.map((type, ti) => (
@@ -175,10 +177,10 @@ export default function PositionsView() {
                   </div>
                 </div>
 
-                {/* 면접관 */}
-                {hasInterviewers && (
-                  <div className="pt-2.5 border-t border-border flex flex-col gap-1">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">면접관</p>
+                {/* 면접관 — 항상 표시 */}
+                <div className="pt-2.5 border-t border-border flex flex-col gap-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">면접관</p>
+                  {hasInterviewers ? (
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                       {usedRounds.map((round) => {
                         const names = (pos.interviewersByRound[round] ?? []).map(getInterviewerName)
@@ -191,8 +193,10 @@ export default function PositionsView() {
                         )
                       })}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-xs text-muted-foreground/40">배치 없음</p>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -209,6 +213,14 @@ export default function PositionsView() {
               <span className="font-semibold text-foreground">{deleteTarget?.name}</span> 포지션을
               삭제하시겠습니까?
             </DialogDescription>
+            {deleteTarget && (() => {
+              const count = interviews.filter((iv) => iv.positionId === deleteTarget.id).length
+              return count > 0 ? (
+                <p className="text-sm text-destructive font-medium -mt-1">
+                  ⚠ 진행 중인 인터뷰 {count}건이 있습니다. 삭제 시 해당 인터뷰의 포지션 정보가 유효하지 않게 됩니다.
+                </p>
+              ) : null
+            })()}
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>취소</Button>

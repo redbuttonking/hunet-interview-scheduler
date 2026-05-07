@@ -184,9 +184,7 @@ export default function DashboardView() {
                       {iv.confirmedSlot!.startTime} ~ {iv.confirmedSlot!.endTime}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {iv.confirmedSlot!.slots?.length
-                        ? [...new Set(iv.confirmedSlot!.slots.map((s) => s.roomName))].join(' / ')
-                        : (iv.confirmedSlot as unknown as { roomName: string }).roomName}
+                      {[...new Set(iv.confirmedSlot!.slots.map((s) => s.roomName))].join(' / ')}
                     </p>
                   </div>
                 </div>
