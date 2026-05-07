@@ -31,6 +31,13 @@ const FILTER_OPTIONS: { value: FilterStatus; label: string }[] = [
   { value: 'confirmed', label: '확정' },
 ]
 
+const STATUS_ORDER: Record<InterviewStatus, number> = {
+  pending_slack: 0,
+  collecting: 1,
+  ready_to_schedule: 2,
+  confirmed: 3,
+}
+
 interface AvailabilityModalState {
   interview: Interview
   interviewer: Interviewer
@@ -79,7 +86,10 @@ export default function SchedulingView() {
     () =>
       interviews
         .filter((iv) => filterStatus === 'all' || iv.status === filterStatus)
-        .filter((iv) => filterPosition === 'all' || iv.positionName === filterPosition),
+        .filter((iv) => filterPosition === 'all' || iv.positionName === filterPosition)
+        .sort((a, b) =>
+          filterStatus === 'all' ? STATUS_ORDER[a.status] - STATUS_ORDER[b.status] : 0,
+        ),
     [interviews, filterStatus, filterPosition],
   )
 
@@ -130,7 +140,7 @@ export default function SchedulingView() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div>

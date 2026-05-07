@@ -195,7 +195,7 @@ export default function WeekView({
                             <div
                               key={res.id}
                               className={cn(
-                                'rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate cursor-pointer',
+                                'rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight cursor-pointer',
                                 STATUS_PILL[res.status],
                               )}
                               onClick={(e) => {
@@ -203,7 +203,14 @@ export default function WeekView({
                                 onEditReservation(res)
                               }}
                             >
-                              {candidateName ?? `${res.startTime}–${res.endTime}`}
+                              {candidateName ? (
+                                <div>
+                                  <div className="opacity-70">{res.startTime}–{res.endTime}</div>
+                                  <div className="truncate">{candidateName}</div>
+                                </div>
+                              ) : (
+                                <span className="truncate">{res.startTime}–{res.endTime}</span>
+                              )}
                             </div>
                           )
                         })}
