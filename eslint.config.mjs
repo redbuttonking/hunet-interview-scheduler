@@ -13,6 +13,12 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // 모달 열릴 때 폼 상태 초기화 패턴은 의도적 사용이므로 경고로 낮춤
+      'react-hooks/set-state-in-effect': 'warn',
+    },
+  },
 ]);
 
 export default eslintConfig;

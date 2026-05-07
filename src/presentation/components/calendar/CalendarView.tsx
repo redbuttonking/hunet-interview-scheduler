@@ -50,9 +50,9 @@ export default function CalendarView() {
     [interviews],
   )
 
-  const createRes = useCreateReservation(startDate, endDate)
-  const updateRes = useUpdateReservation(startDate, endDate)
-  const deleteRes = useDeleteReservation(startDate, endDate)
+  const createRes = useCreateReservation()
+  const updateRes = useUpdateReservation()
+  const deleteRes = useDeleteReservation()
   const updateConfirmedRes = useUpdateConfirmedReservation()
 
   function goToDay(date: Date) {

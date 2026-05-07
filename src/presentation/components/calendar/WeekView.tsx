@@ -59,63 +59,62 @@ export default function WeekView({
   return (
     <div className="flex flex-col gap-4">
       {/* 헤더 */}
-      <div className="flex items-center gap-3">
-        {/* 주간 네비게이션 */}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => onWeekChange(subWeeks(weekStart, 1))}>
-            <ChevronLeft size={15} />
-          </Button>
-          <span className="text-sm font-semibold min-w-[210px] text-center">
-            {format(days[0], 'yyyy년 M월 d일', { locale: ko })}
-            {' – '}
-            {format(days[4], 'M월 d일', { locale: ko })}
-          </span>
-          <Button variant="outline" size="sm" onClick={() => onWeekChange(addWeeks(weekStart, 1))}>
-            <ChevronRight size={15} />
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => onWeekChange(startOfWeek(new Date(), { weekStartsOn: 1 }))}
-          >
-            오늘
-          </Button>
+      <div className="flex flex-col gap-2">
+        {/* 1행: 주간 네비게이션 + 액션 버튼 */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => onWeekChange(subWeeks(weekStart, 1))}>
+              <ChevronLeft size={15} />
+            </Button>
+            <span className="text-sm font-semibold min-w-[210px] text-center">
+              {format(days[0], 'yyyy년 M월 d일', { locale: ko })}
+              {' – '}
+              {format(days[4], 'M월 d일', { locale: ko })}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => onWeekChange(addWeeks(weekStart, 1))}>
+              <ChevronRight size={15} />
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => onWeekChange(startOfWeek(new Date(), { weekStartsOn: 1 }))}
+            >
+              오늘
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setRoomModalOpen(true)}>
+              <Settings2 size={14} />
+              <span className="hidden sm:inline">회의실 관리</span>
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() =>
+                onCreateDraft({
+                  roomId: rooms[0]?.id ?? '',
+                  date: todayStr,
+                  startTime: '10:00',
+                  endTime: '11:00',
+                })
+              }
+            >
+              <Plus size={14} />
+              <span className="hidden sm:inline">예약 추가</span>
+            </Button>
+          </div>
         </div>
 
-        {/* 범례 + 안내 (오늘 버튼 바로 오른쪽) */}
-        <div className="flex items-center gap-3 flex-1">
-          <span className="text-muted-foreground/40 text-sm">|</span>
+        {/* 2행: 범례 + 안내 */}
+        <div className="flex items-center gap-3 flex-wrap">
           {(Object.keys(STATUS_LABEL) as ReservationStatus[]).map((status) => (
             <div key={status} className="flex items-center gap-1.5">
-              <div className={cn('w-2.5 h-2.5 rounded-full', STATUS_DOT[status])} />
-              <span className="text-sm text-muted-foreground">{STATUS_LABEL[status]}</span>
+              <div className={cn('w-2.5 h-2.5 rounded-full shrink-0', STATUS_DOT[status])} />
+              <span className="text-sm text-muted-foreground whitespace-nowrap">{STATUS_LABEL[status]}</span>
             </div>
           ))}
-          <span className="text-sm text-muted-foreground/60 hidden lg:inline">
+          <span className="text-sm text-muted-foreground/60 hidden md:inline whitespace-nowrap">
             · 날짜를 클릭하면 상세 뷰로 이동합니다
           </span>
-        </div>
-
-        {/* 액션 버튼 */}
-        <div className="flex items-center gap-2 ml-auto">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setRoomModalOpen(true)}>
-            <Settings2 size={14} />
-            회의실 관리
-          </Button>
-          <Button
-            size="sm"
-            className="gap-1.5"
-            onClick={() =>
-              onCreateDraft({
-                roomId: rooms[0]?.id ?? '',
-                date: todayStr,
-                startTime: '10:00',
-                endTime: '11:00',
-              })
-            }
-          >
-            <Plus size={14} />
-            예약 추가
-          </Button>
         </div>
       </div>
 

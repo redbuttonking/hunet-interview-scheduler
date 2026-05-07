@@ -16,7 +16,7 @@ export function useRoomReservations(startDate: string, endDate: string) {
   })
 }
 
-export function useCreateReservation(_startDate?: string, _endDate?: string) {
+export function useCreateReservation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateReservationInput) => roomReservationRepository.create(input),
@@ -24,7 +24,7 @@ export function useCreateReservation(_startDate?: string, _endDate?: string) {
   })
 }
 
-export function useUpdateReservation(_startDate?: string, _endDate?: string) {
+export function useUpdateReservation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateReservationInput }) =>
@@ -33,7 +33,7 @@ export function useUpdateReservation(_startDate?: string, _endDate?: string) {
   })
 }
 
-export function useDeleteReservation(_startDate?: string, _endDate?: string) {
+export function useDeleteReservation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => roomReservationRepository.delete(id),

@@ -10,7 +10,7 @@ export interface CreateReservationInput {
   interviewId: string | null
 }
 
-export interface UpdateReservationInput extends Partial<CreateReservationInput> {}
+export type UpdateReservationInput = Partial<CreateReservationInput>
 
 /** 일정 확정 시 예약 블록 분할에 필요한 슬롯 정보 */
 export interface ConfirmSlotInput {

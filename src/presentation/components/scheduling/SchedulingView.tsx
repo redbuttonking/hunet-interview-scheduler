@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2 } from 'lucide-react'
+import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
@@ -51,6 +51,8 @@ export default function SchedulingView() {
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
   const [recommendModal, setRecommendModal] = useState<RecommendModalState | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Interview | null>(null)
+  const [revertTarget, setRevertTarget] = useState<Interview | null>(null)
+  const [sendingId, setSendingId] = useState<string | null>(null)
 
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterPosition, setFilterPosition] = useState<string>('all')
@@ -92,11 +94,14 @@ export default function SchedulingView() {
   }
 
   async function handleSendSlack(interview: Interview) {
+    setSendingId(interview.id)
     try {
       await sendSlack.mutateAsync(interview.id)
       toast.success('수집 상태로 전환되었습니다.')
     } catch {
       toast.error('오류가 발생했습니다.')
+    } finally {
+      setSendingId(null)
     }
   }
 
@@ -112,12 +117,15 @@ export default function SchedulingView() {
     }
   }
 
-  async function handleRevert(interview: Interview) {
+  async function handleRevert() {
+    if (!revertTarget) return
     try {
-      await revertConfirmation.mutateAsync(interview)
+      await revertConfirmation.mutateAsync(revertTarget)
       toast.success('확정이 취소되었습니다. 일정 추천 가능 상태로 돌아갑니다.')
     } catch {
       toast.error('확정 취소 중 오류가 발생했습니다.')
+    } finally {
+      setRevertTarget(null)
     }
   }
 
@@ -247,6 +255,11 @@ export default function SchedulingView() {
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', cfg.className)}>
                       {cfg.label}
+                      {(interview.status === 'collecting' || interview.status === 'ready_to_schedule') && (
+                        <span className="ml-1 opacity-70">
+                          {submittedIds.size}/{interview.interviewerIds.length}명
+                        </span>
+                      )}
                     </span>
                     <span className="text-base font-bold text-foreground">{interview.candidateName}</span>
                     <span className="text-muted-foreground text-sm">·</span>
@@ -279,7 +292,7 @@ export default function SchedulingView() {
                       disabled={sendSlack.isPending}
                     >
                       <Send size={13} />
-                      슬랙 발송
+                      {sendingId === interview.id ? '발송 중...' : '슬랙 발송'}
                     </Button>
                   </div>
                 )}
@@ -362,10 +375,10 @@ export default function SchedulingView() {
                         )}
                       </div>
                       <button
-                        onClick={() => handleRevert(interview)}
-                        disabled={revertConfirmation.isPending}
-                        className="text-xs text-muted-foreground hover:text-destructive underline shrink-0"
+                        onClick={() => setRevertTarget(interview)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0"
                       >
+                        <RotateCcw size={11} />
                         확정 취소
                       </button>
                     </div>
@@ -396,6 +409,30 @@ export default function SchedulingView() {
           interview={recommendModal.interview}
         />
       )}
+
+      {/* 확정 취소 확인 */}
+      <Dialog open={revertTarget !== null} onOpenChange={(o) => !o && setRevertTarget(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>확정 취소</DialogTitle>
+            <DialogDescription>
+              <span className="font-semibold text-foreground">{revertTarget?.candidateName}</span>님의
+              확정된 일정을 취소하시겠습니까? 회의실 예약도 함께 해제되고,
+              &apos;일정 추천 가능&apos; 상태로 돌아갑니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setRevertTarget(null)}>취소</Button>
+            <Button
+              variant="destructive"
+              onClick={handleRevert}
+              disabled={revertConfirmation.isPending}
+            >
+              {revertConfirmation.isPending ? '처리 중...' : '확정 취소'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 삭제 확인 */}
       <Dialog open={deleteTarget !== null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
