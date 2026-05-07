@@ -61,7 +61,7 @@ export default function PositionsView() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-5xl mx-auto">
       {/* 헤더 */}
       <div className="flex items-start justify-between mb-6 gap-3">
         <div>
