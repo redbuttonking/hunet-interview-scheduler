@@ -24,6 +24,12 @@ const WEEK_FILTERS: { value: WeekFilter; label: string }[] = [
   { value: 'all', label: '전체' },
 ]
 
+const PENDING_ORDER: Record<Exclude<InterviewStatus, 'confirmed'>, number> = {
+  pending_slack: 0,
+  collecting: 1,
+  ready_to_schedule: 2,
+}
+
 const PENDING_FILTERS: { value: PendingFilter; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'pending_slack', label: '슬랙 발송 전' },
@@ -69,12 +75,18 @@ export default function DashboardView() {
 
   const allPending = useMemo(
     () =>
-      interviews.filter(
-        (iv) =>
-          iv.status === 'pending_slack' ||
-          iv.status === 'collecting' ||
-          iv.status === 'ready_to_schedule',
-      ),
+      interviews
+        .filter(
+          (iv) =>
+            iv.status === 'pending_slack' ||
+            iv.status === 'collecting' ||
+            iv.status === 'ready_to_schedule',
+        )
+        .sort(
+          (a, b) =>
+            PENDING_ORDER[a.status as keyof typeof PENDING_ORDER] -
+            PENDING_ORDER[b.status as keyof typeof PENDING_ORDER],
+        ),
     [interviews],
   )
 
@@ -99,7 +111,7 @@ export default function DashboardView() {
   )
 
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-5xl space-y-8">
       {/* 헤더 */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">대시보드</h1>
@@ -261,7 +273,7 @@ function PendingRow({ interview: iv }: { interview: Interview }) {
 
   return (
     <div className="flex items-center gap-4 px-5 py-3.5">
-      <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap', cfg.className)}>
+      <span className={cn('inline-flex items-center justify-center text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap w-[7rem]', cfg.className)}>
         {cfg.label}
       </span>
       <div className="flex-1 min-w-0">
