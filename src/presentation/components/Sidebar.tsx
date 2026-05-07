@@ -1,8 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Briefcase, Users, CalendarClock, Calendar, LogOut } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, CalendarClock, Calendar, LogOut, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -13,15 +14,35 @@ const NAV_ITEMS = [
   { href: '/calendar',     label: '캘린더',      icon: Calendar },
 ]
 
-export default function Sidebar() {
+interface Props {
+  open: boolean
+  onClose: () => void
+}
+
+export default function Sidebar({ open, onClose }: Props) {
   const pathname = usePathname()
 
-  return (
-    <aside className="w-56 shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border">
+  // 페이지 이동 시 모바일 드로어 자동 닫기
+  useEffect(() => {
+    onClose()
+  }, [pathname, onClose])
+
+  const navContent = (
+    <>
       {/* 브랜드 */}
-      <div className="px-5 pt-6 pb-5 border-b border-sidebar-border">
-        <p className="text-base font-bold text-sidebar-foreground leading-tight">휴넷</p>
-        <p className="text-xs text-muted-foreground mt-0.5">채용 인터뷰 시스템</p>
+      <div className="px-5 pt-6 pb-5 border-b border-sidebar-border flex items-center justify-between">
+        <div>
+          <p className="text-base font-bold text-sidebar-foreground leading-tight">휴넷</p>
+          <p className="text-xs text-muted-foreground mt-0.5">채용 인터뷰 시스템</p>
+        </div>
+        {/* 모바일 드로어 닫기 버튼 */}
+        <button
+          onClick={onClose}
+          className="md:hidden p-1.5 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          aria-label="메뉴 닫기"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* 네비게이션 */}
@@ -62,6 +83,30 @@ export default function Sidebar() {
           로그아웃
         </button>
       </div>
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      {/* 데스크탑 사이드바 */}
+      <aside className="hidden md:flex w-56 shrink-0 flex-col bg-sidebar border-r border-sidebar-border">
+        {navContent}
+      </aside>
+
+      {/* 모바일 드로어 */}
+      {open && (
+        <div className="fixed inset-0 z-40 md:hidden" onClick={onClose}>
+          {/* 오버레이 */}
+          <div className="absolute inset-0 bg-black/50" />
+          {/* 드로어 패널 */}
+          <aside
+            className="absolute left-0 top-0 h-full w-64 flex flex-col bg-sidebar border-r border-sidebar-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {navContent}
+          </aside>
+        </div>
+      )}
+    </>
   )
 }

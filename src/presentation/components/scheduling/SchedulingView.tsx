@@ -142,7 +142,7 @@ export default function SchedulingView() {
   return (
     <div className="max-w-5xl">
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">일정 조율</h1>
           <p className="text-sm text-muted-foreground mt-1">후보자별 인터뷰 일정을 생성하고 조율합니다.</p>

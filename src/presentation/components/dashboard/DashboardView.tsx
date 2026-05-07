@@ -114,7 +114,7 @@ export default function DashboardView() {
     <div className="max-w-5xl space-y-8">
       {/* 헤더 */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">대시보드</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">대시보드</h1>
         <p className="text-sm text-muted-foreground mt-1">{formatToday()}</p>
       </div>
 
@@ -169,7 +169,7 @@ export default function DashboardView() {
           {!isLoading && filteredUpcoming.length > 0 && (
             <div className="divide-y divide-border">
               {filteredUpcoming.map((iv) => (
-                <div key={iv.id} className="flex items-center gap-4 px-5 py-3.5">
+                <div key={iv.id} className="flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-3.5">
                   <div className="w-16 text-xs font-semibold text-primary shrink-0">
                     {formatDateKo(iv.confirmedSlot!.date)}
                   </div>
@@ -270,8 +270,8 @@ function PendingRow({ interview: iv }: { interview: Interview }) {
   const totalCount = iv.interviewerIds.length
 
   return (
-    <div className="flex items-center gap-4 px-5 py-3.5">
-      <span className={cn('inline-flex items-center justify-center text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap w-[7rem]', cfg.className)}>
+    <div className="flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-3.5">
+      <span className={cn('inline-flex items-center justify-center text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap w-[5.5rem] sm:w-[7rem]', cfg.className)}>
         {cfg.label}
       </span>
       <div className="flex-1 min-w-0">

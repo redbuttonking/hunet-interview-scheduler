@@ -63,7 +63,7 @@ export default function PositionsView() {
   return (
     <div className="max-w-5xl">
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">포지션 관리</h1>
           <p className="text-sm text-muted-foreground mt-1">채용 절차와 면접관을 포지션별로 설정합니다.</p>

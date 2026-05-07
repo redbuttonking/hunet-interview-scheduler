@@ -56,7 +56,7 @@ export default function InterviewersView() {
   return (
     <div className="max-w-5xl">
       {/* 페이지 헤더 */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">면접관 관리</h1>
           <p className="text-sm text-muted-foreground mt-1">면접관을 등록하고 슬랙 ID를 관리합니다.</p>
@@ -69,8 +69,8 @@ export default function InterviewersView() {
 
       {/* 카드 컨테이너 */}
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-        {/* 테이블 헤더 */}
-        <div className="grid grid-cols-[1fr_1fr_1fr_auto] px-5 py-3 border-b border-border bg-muted/40">
+        {/* 테이블 헤더 — 데스크탑만 표시 */}
+        <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_auto] px-5 py-3 border-b border-border bg-muted/40">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">이름</span>
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">슬랙 ID</span>
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">소속 포지션</span>
@@ -106,45 +106,78 @@ export default function InterviewersView() {
               return (
                 <div
                   key={iv.id}
-                  className="grid grid-cols-[1fr_1fr_1fr_auto] items-center px-5 py-4 hover:bg-muted/30 transition-colors group"
+                  className="group hover:bg-muted/30 transition-colors"
                 >
-                  {/* 이름 */}
-                  <span className="text-sm font-medium text-foreground">{iv.name}</span>
-
-                  {/* 슬랙 ID */}
-                  <span className="text-sm text-muted-foreground font-mono">@{iv.slackId}</span>
-
-                  {/* 소속 포지션 */}
-                  <div className="flex flex-wrap gap-1">
-                    {positionNames.length > 0 ? (
-                      positionNames.map((name) => (
-                        <Badge
-                          key={name}
-                          variant="secondary"
-                          className="text-xs px-2 py-0.5 bg-primary/10 text-primary border-0"
-                        >
-                          {name}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground">미배치</span>
-                    )}
+                  {/* 모바일 레이아웃 */}
+                  <div className="flex sm:hidden items-start justify-between px-4 py-3.5 gap-3">
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      <span className="text-sm font-medium text-foreground">{iv.name}</span>
+                      <span className="text-xs text-muted-foreground font-mono">@{iv.slackId}</span>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {positionNames.length > 0 ? (
+                          positionNames.map((name) => (
+                            <Badge
+                              key={name}
+                              variant="secondary"
+                              className="text-xs px-2 py-0.5 bg-primary/10 text-primary border-0"
+                            >
+                              {name}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-xs text-muted-foreground">미배치</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleEditClick(iv)}
+                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(iv)}
+                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
 
-                  {/* 액션 */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity w-16 justify-end">
-                    <button
-                      onClick={() => handleEditClick(iv)}
-                      className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Pencil size={13} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget(iv)}
-                      className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                  {/* 데스크탑 레이아웃 */}
+                  <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_auto] items-center px-5 py-4">
+                    <span className="text-sm font-medium text-foreground">{iv.name}</span>
+                    <span className="text-sm text-muted-foreground font-mono">@{iv.slackId}</span>
+                    <div className="flex flex-wrap gap-1">
+                      {positionNames.length > 0 ? (
+                        positionNames.map((name) => (
+                          <Badge
+                            key={name}
+                            variant="secondary"
+                            className="text-xs px-2 py-0.5 bg-primary/10 text-primary border-0"
+                          >
+                            {name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">미배치</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity w-16 justify-end">
+                      <button
+                        onClick={() => handleEditClick(iv)}
+                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(iv)}
+                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
