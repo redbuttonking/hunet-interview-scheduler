@@ -84,7 +84,7 @@ export default function WeekView({
           <div className="flex items-center gap-2 shrink-0">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setRoomModalOpen(true)}>
               <Settings2 size={14} />
-              <span className="hidden sm:inline">회의실 관리</span>
+              <span className="">회의실 관리</span>
             </Button>
             <Button
               size="sm"
@@ -100,7 +100,7 @@ export default function WeekView({
               }
             >
               <Plus size={14} />
-              <span className="hidden sm:inline">예약 추가</span>
+              <span className="">예약 추가</span>
             </Button>
           </div>
         </div>
