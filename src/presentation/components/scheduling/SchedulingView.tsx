@@ -250,29 +250,30 @@ export default function SchedulingView() {
 
             return (
               <div key={interview.id} className="bg-card rounded-xl border border-border shadow-sm p-5">
-                {/* 카드 헤더 */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', cfg.className)}>
-                      {cfg.label}
-                      {(interview.status === 'collecting' || interview.status === 'ready_to_schedule') && (
-                        <span className="ml-1 opacity-70">
-                          {submittedIds.size}/{interview.interviewerIds.length}명
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-base font-bold text-foreground">{interview.candidateName}</span>
-                    <span className="text-muted-foreground text-sm">·</span>
-                    <span className="text-sm text-muted-foreground">{interview.positionName}</span>
-                    <span className="text-muted-foreground text-sm">·</span>
-                    <span className="text-sm text-muted-foreground">{interview.typeLabel}</span>
-                  </div>
+                {/* 카드 헤더: 배지 + 삭제 */}
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap', cfg.className)}>
+                    {cfg.label}
+                    {(interview.status === 'collecting' || interview.status === 'ready_to_schedule') && (
+                      <span className="ml-1 opacity-70">
+                        {submittedIds.size}/{interview.interviewerIds.length}명
+                      </span>
+                    )}
+                  </span>
                   <button
                     onClick={() => setDeleteTarget(interview)}
                     className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
                   >
                     <Trash2 size={13} />
                   </button>
+                </div>
+                {/* 후보자 정보 */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-base font-bold text-foreground">{interview.candidateName}</span>
+                  <span className="text-muted-foreground text-sm">·</span>
+                  <span className="text-sm text-muted-foreground">{interview.positionName}</span>
+                  <span className="text-muted-foreground text-sm">·</span>
+                  <span className="text-sm text-muted-foreground">{interview.typeLabel}</span>
                 </div>
 
                 {/* 기간 */}

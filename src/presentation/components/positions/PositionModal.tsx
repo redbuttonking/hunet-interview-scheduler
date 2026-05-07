@@ -149,6 +149,7 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
   )
 
   function addType() {
+    if (interviewTypes.length >= 3) return
     setInterviewTypes((prev) => [...prev, { label: '', sessions: [{ rounds: [] }] }])
   }
 
@@ -308,10 +309,11 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
             <button
               type="button"
               onClick={addType}
-              className="flex items-center gap-1.5 text-sm text-primary hover:underline mt-1"
+              disabled={interviewTypes.length >= 3}
+              className="flex items-center gap-1.5 text-sm text-primary hover:underline mt-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:no-underline"
             >
               <Plus size={14} />
-              인터뷰 유형 추가
+              인터뷰 유형 추가 {interviewTypes.length >= 3 && '(최대 3개)'}
             </button>
           </div>
 

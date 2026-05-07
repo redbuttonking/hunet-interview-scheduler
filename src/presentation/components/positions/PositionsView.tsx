@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Briefcase } from 'lucide-react'
+import { Plus, Pencil, Trash2, Briefcase, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { Position, Round, ALL_ROUNDS } from '@/domain/model/Position'
@@ -31,6 +32,15 @@ export default function PositionsView() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Position | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Position | null>(null)
+  const [search, setSearch] = useState('')
+
+  const filteredPositions = useMemo(
+    () =>
+      positions.filter((p) =>
+        p.name.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [positions, search],
+  )
 
   function getInterviewerName(id: string) {
     return interviewers.find((iv) => iv.id === id)?.name ?? '알 수 없음'
@@ -62,6 +72,19 @@ export default function PositionsView() {
         </Button>
       </div>
 
+      {/* 검색 */}
+      {!isLoading && positions.length > 0 && (
+        <div className="relative mb-4">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="포지션명 검색"
+            className="pl-8"
+          />
+        </div>
+      )}
+
       {/* 로딩 */}
       {isLoading && (
         <div className="py-16 flex flex-col items-center gap-2 text-muted-foreground">
@@ -83,10 +106,17 @@ export default function PositionsView() {
         </div>
       )}
 
+      {/* 검색 결과 없음 */}
+      {!isLoading && positions.length > 0 && filteredPositions.length === 0 && (
+        <div className="py-12 text-center text-sm text-muted-foreground">
+          &apos;{search}&apos;와 일치하는 포지션이 없습니다.
+        </div>
+      )}
+
       {/* 카드 그리드 */}
-      {!isLoading && positions.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {positions.map((pos) => {
+      {!isLoading && filteredPositions.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filteredPositions.map((pos) => {
             const usedRounds = ALL_ROUNDS.filter((r) =>
               pos.interviewTypes.some((t) => t.sessions.some((s) => s.rounds.includes(r))),
             )
@@ -95,36 +125,35 @@ export default function PositionsView() {
             return (
               <div
                 key={pos.id}
-                className="group bg-card rounded-xl border border-border shadow-sm p-5 flex flex-col gap-4 h-64"
+                className="group bg-card rounded-xl border border-border shadow-sm p-4 flex flex-col gap-3"
               >
                 {/* 포지션명 + 액션 */}
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-bold text-foreground leading-snug">{pos.name}</p>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     <button
                       onClick={() => { setEditing(pos); setModalOpen(true) }}
                       className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <Pencil size={13} />
+                      <Pencil size={12} />
                     </button>
                     <button
                       onClick={() => setDeleteTarget(pos)}
                       className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>
 
-                {/* 인터뷰 유형 목록 */}
-                <div className="flex flex-col gap-2 flex-1 min-h-0">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">인터뷰 유형</p>
-                  <div className="flex flex-col gap-2 overflow-y-auto">
+                {/* 인터뷰 유형 */}
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">인터뷰 유형</p>
+                  <div className="flex flex-col gap-1">
                     {pos.interviewTypes.map((type, ti) => (
-                      <div key={ti} className="flex items-center gap-1.5 flex-wrap">
-                        {/* 세션 배지 먼저 */}
+                      <div key={ti} className="flex items-center gap-1 flex-wrap">
                         {type.sessions.map((session, si) => (
-                          <span key={si} className="flex items-center gap-1 shrink-0">
+                          <span key={si} className="flex items-center gap-0.5 shrink-0">
                             {si > 0 && <span className="text-muted-foreground text-xs">→</span>}
                             {session.rounds.map((r) => (
                               <span
@@ -139,9 +168,8 @@ export default function PositionsView() {
                             ))}
                           </span>
                         ))}
-                        {/* 유형명 */}
                         <span className="text-muted-foreground text-xs">—</span>
-                        <span className="text-xs text-foreground font-medium">{type.label}</span>
+                        <span className="text-xs text-foreground font-medium truncate">{type.label}</span>
                       </div>
                     ))}
                   </div>
@@ -149,16 +177,16 @@ export default function PositionsView() {
 
                 {/* 면접관 */}
                 {hasInterviewers && (
-                  <div className="pt-3 border-t border-border flex flex-col gap-1.5">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">면접관</p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  <div className="pt-2.5 border-t border-border flex flex-col gap-1">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">면접관</p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                       {usedRounds.map((round) => {
                         const names = (pos.interviewersByRound[round] ?? []).map(getInterviewerName)
                         if (names.length === 0) return null
                         return (
-                          <div key={round} className="flex items-center gap-1.5 text-xs">
+                          <div key={round} className="flex items-center gap-1 text-xs">
                             <span className={cn('font-semibold shrink-0', ROUND_TEXT_COLORS[round])}>{round}</span>
-                            <span className="text-muted-foreground">{names.join(', ')}</span>
+                            <span className="text-muted-foreground truncate">{names.join(', ')}</span>
                           </div>
                         )
                       })}

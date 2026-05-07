@@ -112,7 +112,7 @@ export default function WeekView({
               <span className="text-sm text-muted-foreground whitespace-nowrap">{STATUS_LABEL[status]}</span>
             </div>
           ))}
-          <span className="text-sm text-muted-foreground/60 hidden md:inline whitespace-nowrap">
+          <span className="text-sm text-muted-foreground/60 whitespace-nowrap">
             · 날짜를 클릭하면 상세 뷰로 이동합니다
           </span>
         </div>

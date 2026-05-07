@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DatePickerField } from '@/components/ui/date-picker'
 import { X } from 'lucide-react'
 import { usePositions } from '@/application/usecase/position/usePositions'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
@@ -112,7 +113,9 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
             <Label>포지션</Label>
             <Select value={positionId} onValueChange={(v) => v && setPositionId(v)}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="포지션 선택" />
+                <SelectValue placeholder="포지션 선택">
+                  {positions.find((p) => p.id === positionId)?.name}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {positions.map((p) => (
@@ -172,13 +175,14 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
             </div>
           )}
 
-          {/* 가용 일정 요청 기간 */}
+          {/* 인터뷰 진행 기간 */}
           <div className="space-y-1.5">
-            <Label>가용 일정 요청 기간</Label>
+            <Label>인터뷰 진행 기간</Label>
+            <p className="text-xs text-muted-foreground -mt-0.5">면접관들에게 가능한 날짜를 요청할 범위입니다.</p>
             <div className="flex items-center gap-2">
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="flex-1" />
-              <span className="text-muted-foreground text-sm">~</span>
-              <Input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} className="flex-1" />
+              <DatePickerField value={startDate} onChange={setStartDate} placeholder="시작일" className="flex-1" />
+              <span className="text-muted-foreground text-sm shrink-0">~</span>
+              <DatePickerField value={endDate} onChange={setEndDate} min={startDate} placeholder="종료일" className="flex-1" />
             </div>
           </div>
         </div>
