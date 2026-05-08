@@ -7,22 +7,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-
-const TEMPLATE_KEY = 'slack-message-template'
-
-const DEFAULT_TEMPLATE = {
-  header:
-    '안녕하세요!\n{포지션} ({후보자명}) {유형} 인터뷰 일정 조율로 연락 드립니다~\n\n아래 날짜 중 가능하신 시간대 말씀해 주시면 감사 드리겠습니다 ^^',
-  footer: '',
-}
-
-function loadTemplate() {
-  try {
-    const saved = localStorage.getItem(TEMPLATE_KEY)
-    if (saved) return JSON.parse(saved)
-  } catch {}
-  return DEFAULT_TEMPLATE
-}
+import { useSlackTemplate, useSaveSlackTemplate, DEFAULT_TEMPLATE } from '@/application/usecase/settings/useSlackTemplate'
 
 interface Props {
   open: boolean
@@ -30,21 +15,27 @@ interface Props {
 }
 
 export default function SlackTemplateModal({ open, onOpenChange }: Props) {
+  const { data: template } = useSlackTemplate()
+  const saveTemplate = useSaveSlackTemplate()
+
   const [header, setHeader] = useState('')
   const [footer, setFooter] = useState('')
 
   useEffect(() => {
-    if (open) {
-      const tpl = loadTemplate()
-      setHeader(tpl.header)
-      setFooter(tpl.footer)
+    if (open && template) {
+      setHeader(template.header)
+      setFooter(template.footer)
     }
-  }, [open])
+  }, [open, template])
 
-  function handleSave() {
-    localStorage.setItem(TEMPLATE_KEY, JSON.stringify({ header, footer }))
-    toast.success('템플릿이 저장되었습니다.')
-    onOpenChange(false)
+  async function handleSave() {
+    try {
+      await saveTemplate.mutateAsync({ header, footer })
+      toast.success('템플릿이 저장되었습니다.')
+      onOpenChange(false)
+    } catch {
+      toast.error('저장 중 오류가 발생했습니다.')
+    }
   }
 
   function handleReset() {
@@ -101,7 +92,9 @@ export default function SlackTemplateModal({ open, onOpenChange }: Props) {
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>취소</Button>
-            <Button onClick={handleSave}>저장</Button>
+            <Button onClick={handleSave} disabled={saveTemplate.isPending}>
+              {saveTemplate.isPending ? '저장 중...' : '저장'}
+            </Button>
           </div>
         </div>
       </DialogContent>

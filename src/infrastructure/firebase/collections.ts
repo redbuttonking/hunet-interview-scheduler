@@ -5,4 +5,5 @@ export const COLLECTIONS = {
   INTERVIEWS: 'interviews',
   ROOMS: 'rooms',
   ROOM_RESERVATIONS: 'roomReservations',
+  SETTINGS: 'settings',
 } as const

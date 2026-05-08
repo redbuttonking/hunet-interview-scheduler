@@ -17,24 +17,9 @@ import { cn } from '@/lib/utils'
 import { Interview } from '@/domain/model/Interview'
 import { Interviewer } from '@/domain/model/Interviewer'
 import { useSendSlack } from '@/application/usecase/interview/useInterviews'
+import { useSlackTemplate } from '@/application/usecase/settings/useSlackTemplate'
 
 const hd = new Holidays('KR')
-
-const TEMPLATE_KEY = 'slack-message-template'
-
-const DEFAULT_TEMPLATE = {
-  header:
-    '안녕하세요!\n{포지션} ({후보자명}) {유형} 인터뷰 일정 조율로 연락 드립니다~\n\n아래 날짜 중 가능하신 시간대 말씀해 주시면 감사 드리겠습니다 ^^',
-  footer: '',
-}
-
-function loadTemplate(): { header: string; footer: string } {
-  try {
-    const saved = localStorage.getItem(TEMPLATE_KEY)
-    if (saved) return JSON.parse(saved)
-  } catch {}
-  return DEFAULT_TEMPLATE
-}
 
 function fillPlaceholders(template: string, interview: Interview): string {
   return template
@@ -65,6 +50,7 @@ interface Props {
 
 export default function SlackSendModal({ open, onOpenChange, interview, interviewers }: Props) {
   const sendSlack = useSendSlack()
+  const { data: template } = useSlackTemplate()
 
   const [selectedDate, setSelectedDate] = useState('')
   const [excludedDates, setExcludedDates] = useState<Set<string>>(new Set())
@@ -72,14 +58,13 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
   const [footer, setFooter] = useState('')
 
   useEffect(() => {
-    if (open) {
-      const tpl = loadTemplate()
-      setHeaderTemplate(tpl.header)
-      setFooter(tpl.footer)
+    if (open && template) {
+      setHeaderTemplate(template.header)
+      setFooter(template.footer)
       setSelectedDate('')
       setExcludedDates(new Set())
     }
-  }, [open])
+  }, [open, template])
 
   const weekDates = useMemo(() => (selectedDate ? getWeekDates(selectedDate) : []), [selectedDate])
 
@@ -131,8 +116,6 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
       toast.error('슬랙 ID가 등록된 면접관이 없습니다. 면접관 관리 페이지에서 슬랙 ID를 입력해주세요.')
       return
     }
-
-    localStorage.setItem(TEMPLATE_KEY, JSON.stringify({ header: headerTemplate, footer }))
 
     try {
       await sendSlack.mutateAsync({ interviewId: interview.id, slackIds, message: preview })
