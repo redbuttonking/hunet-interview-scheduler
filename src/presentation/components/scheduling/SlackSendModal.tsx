@@ -24,7 +24,7 @@ const TEMPLATE_KEY = 'slack-message-template'
 
 const DEFAULT_TEMPLATE = {
   header:
-    '안녕하세요!\n{후보자명}님의 {포지션} {유형} 면접 일정 조율을 위해 연락드립니다.\n\n아래 날짜 중 가능하신 시간대(시작~종료 시간)를 알려주시면 감사하겠습니다.',
+    '안녕하세요!\n{포지션} ({후보자명}) {유형} 인터뷰 일정 조율로 연락 드립니다~\n\n아래 날짜 중 가능하신 시간대 말씀해 주시면 감사 드리겠습니다 ^^',
   footer: '감사합니다.\n휴넷 채용팀',
 }
 
@@ -53,7 +53,7 @@ function isHoliday(date: Date): boolean {
 }
 
 function formatDate(date: Date): string {
-  return format(date, 'yyyy년 M월 d일 (eee)', { locale: ko })
+  return format(date, 'yyyy년 M월 d일 (eee)', { locale: ko }) + ' (오전 / 오후)'
 }
 
 interface Props {
