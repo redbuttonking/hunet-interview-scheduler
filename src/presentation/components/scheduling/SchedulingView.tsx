@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2, RotateCcw } from 'lucide-react'
+import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2, RotateCcw, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
@@ -14,6 +14,7 @@ import InterviewCreateModal from './InterviewCreateModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
 import ScheduleRecommendModal from './ScheduleRecommendModal'
 import SlackSendModal from './SlackSendModal'
+import SlackTemplateModal from './SlackTemplateModal'
 
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string }> = {
   pending_slack: { label: '슬랙 발송 전', className: 'bg-muted text-muted-foreground' },
@@ -58,6 +59,7 @@ export default function SchedulingView() {
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
   const [recommendModal, setRecommendModal] = useState<RecommendModalState | null>(null)
   const [slackModal, setSlackModal] = useState<Interview | null>(null)
+  const [templateOpen, setTemplateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Interview | null>(null)
   const [revertTarget, setRevertTarget] = useState<Interview | null>(null)
 
@@ -135,10 +137,16 @@ export default function SchedulingView() {
           <h1 className="text-2xl font-bold text-foreground">일정 조율</h1>
           <p className="text-sm text-muted-foreground mt-1">후보자별 인터뷰 일정을 생성하고 조율합니다.</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
-          <Plus size={15} />
-          새 인터뷰 만들기
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setTemplateOpen(true)} className="gap-1.5">
+            <FileText size={14} />
+            메시지 템플릿
+          </Button>
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <Plus size={15} />
+            새 인터뷰 만들기
+          </Button>
+        </div>
       </div>
 
       {/* 필터 */}
@@ -390,6 +398,7 @@ export default function SchedulingView() {
 
       {/* 모달 */}
       <InterviewCreateModal open={createOpen} onOpenChange={setCreateOpen} />
+      <SlackTemplateModal open={templateOpen} onOpenChange={setTemplateOpen} />
 
       {slackModal && (
         <SlackSendModal
