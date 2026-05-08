@@ -8,11 +8,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from '@/lib/utils'
 import { Interview, InterviewStatus } from '@/domain/model/Interview'
 import { Interviewer } from '@/domain/model/Interviewer'
-import { useInterviews, useDeleteInterview, useSendSlack, useRevertConfirmation } from '@/application/usecase/interview/useInterviews'
+import { useInterviews, useDeleteInterview, useRevertConfirmation } from '@/application/usecase/interview/useInterviews'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
 import InterviewCreateModal from './InterviewCreateModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
 import ScheduleRecommendModal from './ScheduleRecommendModal'
+import SlackSendModal from './SlackSendModal'
 
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string }> = {
   pending_slack: { label: '슬랙 발송 전', className: 'bg-muted text-muted-foreground' },
@@ -52,14 +53,13 @@ export default function SchedulingView() {
   const { data: interviewers = [] } = useInterviewers()
   const deleteInterview = useDeleteInterview()
   const revertConfirmation = useRevertConfirmation()
-  const sendSlack = useSendSlack()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
   const [recommendModal, setRecommendModal] = useState<RecommendModalState | null>(null)
+  const [slackModal, setSlackModal] = useState<Interview | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Interview | null>(null)
   const [revertTarget, setRevertTarget] = useState<Interview | null>(null)
-  const [sendingId, setSendingId] = useState<string | null>(null)
 
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterPosition, setFilterPosition] = useState<string>('all')
@@ -101,18 +101,6 @@ export default function SchedulingView() {
 
   function getInterviewer(id: string) {
     return interviewers.find((iv) => iv.id === id)
-  }
-
-  async function handleSendSlack(interview: Interview) {
-    setSendingId(interview.id)
-    try {
-      await sendSlack.mutateAsync(interview.id)
-      toast.success('수집 상태로 전환되었습니다.')
-    } catch {
-      toast.error('오류가 발생했습니다.')
-    } finally {
-      setSendingId(null)
-    }
   }
 
   async function handleDelete() {
@@ -299,11 +287,10 @@ export default function SchedulingView() {
                     <Button
                       size="sm"
                       className="gap-1.5"
-                      onClick={() => handleSendSlack(interview)}
-                      disabled={sendSlack.isPending}
+                      onClick={() => setSlackModal(interview)}
                     >
                       <Send size={13} />
-                      {sendingId === interview.id ? '발송 중...' : '슬랙 발송'}
+                      슬랙 발송
                     </Button>
                   </div>
                 )}
@@ -403,6 +390,15 @@ export default function SchedulingView() {
 
       {/* 모달 */}
       <InterviewCreateModal open={createOpen} onOpenChange={setCreateOpen} />
+
+      {slackModal && (
+        <SlackSendModal
+          open={!!slackModal}
+          onOpenChange={(o) => !o && setSlackModal(null)}
+          interview={slackModal}
+          interviewers={interviewers}
+        />
+      )}
 
       {availModal && (
         <AvailabilityInputModal

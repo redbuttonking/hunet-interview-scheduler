@@ -113,8 +113,27 @@ export function useSubmitAvailability() {
 export function useSendSlack() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (interviewId: string) =>
-      interviewRepository.update(interviewId, { status: 'collecting' }),
+    mutationFn: async ({
+      interviewId,
+      slackIds,
+      message,
+    }: {
+      interviewId: string
+      slackIds: string[]
+      message: string
+    }) => {
+      const res = await fetch('/api/slack/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slackIds, message }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        if (data.failed?.length) throw new Error(`일부 면접관에게 발송하지 못했습니다: ${data.failed.join(', ')}`)
+        throw new Error('슬랙 발송에 실패했습니다.')
+      }
+      return interviewRepository.update(interviewId, { status: 'collecting' })
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
   })
 }
