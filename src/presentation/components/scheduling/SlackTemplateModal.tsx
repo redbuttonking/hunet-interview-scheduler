@@ -13,7 +13,7 @@ const TEMPLATE_KEY = 'slack-message-template'
 const DEFAULT_TEMPLATE = {
   header:
     '안녕하세요!\n{포지션} ({후보자명}) {유형} 인터뷰 일정 조율로 연락 드립니다~\n\n아래 날짜 중 가능하신 시간대 말씀해 주시면 감사 드리겠습니다 ^^',
-  footer: '감사합니다.\n휴넷 채용팀',
+  footer: '',
 }
 
 function loadTemplate() {
