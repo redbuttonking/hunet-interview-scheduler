@@ -3,8 +3,9 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Briefcase, Users, CalendarClock, Calendar, LogOut, X } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, CalendarClock, Calendar, LogOut, X, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuthContext } from './auth/AuthProvider'
 
 const NAV_ITEMS = [
   { href: '/dashboard',    label: '대시보드',   icon: LayoutDashboard },
@@ -14,6 +15,11 @@ const NAV_ITEMS = [
   { href: '/calendar',     label: '캘린더',      icon: Calendar },
 ]
 
+const ROLE_LABEL: Record<string, string> = {
+  admin: '관리자',
+  recruiter: '채용담당자',
+}
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -21,6 +27,7 @@ interface Props {
 
 export default function Sidebar({ open, onClose }: Props) {
   const pathname = usePathname()
+  const { user, signOut } = useAuthContext()
 
   // 페이지 이동 시 모바일 드로어 자동 닫기
   useEffect(() => {
@@ -65,20 +72,43 @@ export default function Sidebar({ open, onClose }: Props) {
             </Link>
           )
         })}
+        {user?.role === 'admin' && (
+          <Link
+            href="/admin/users"
+            className={cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+              pathname.startsWith('/admin')
+                ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent',
+            )}
+          >
+            <ShieldCheck size={16} className={pathname.startsWith('/admin') ? 'opacity-90' : 'opacity-60'} />
+            계정 관리
+          </Link>
+        )}
       </nav>
 
       {/* 하단 유저 + 로그아웃 */}
       <div className="px-3 pb-4 border-t border-sidebar-border pt-3 flex flex-col gap-0.5">
         <div className="flex items-center gap-3 px-3 py-2.5">
           <div className="w-7 h-7 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0">
-            <span className="text-xs font-semibold text-sidebar-primary-foreground">박</span>
+            <span className="text-xs font-semibold text-sidebar-primary-foreground">
+              {user?.name?.[0] ?? '?'}
+            </span>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground leading-tight truncate">박현수</p>
-            <p className="text-xs text-muted-foreground leading-tight">채용 담당자</p>
+            <p className="text-sm font-medium text-sidebar-foreground leading-tight truncate">
+              {user?.name ?? ''}
+            </p>
+            <p className="text-xs text-muted-foreground leading-tight">
+              {user?.role ? ROLE_LABEL[user.role] : ''}
+            </p>
           </div>
         </div>
-        <button className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm text-destructive hover:bg-sidebar-accent transition-colors">
+        <button
+          onClick={signOut}
+          className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm text-destructive hover:bg-sidebar-accent transition-colors"
+        >
           <LogOut size={15} className="opacity-70" />
           로그아웃
         </button>

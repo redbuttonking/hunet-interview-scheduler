@@ -6,4 +6,5 @@ export const COLLECTIONS = {
   ROOMS: 'rooms',
   ROOM_RESERVATIONS: 'roomReservations',
   SETTINGS: 'settings',
+  USERS: 'users',
 } as const
