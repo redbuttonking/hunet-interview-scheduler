@@ -1,10 +1,10 @@
 import {
   collection, getDocs, addDoc, updateDoc,
-  deleteDoc, doc, getDoc, serverTimestamp, query, orderBy,
+  deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, runTransaction,
 } from 'firebase/firestore'
 import { db } from './config'
 import { COLLECTIONS } from './collections'
-import { Interview, InterviewerAvailability } from '@/domain/model/Interview'
+import { Interview, InterviewerAvailability, CandidateOption } from '@/domain/model/Interview'
 import { Round } from '@/domain/model/Position'
 import {
   IInterviewRepository,
@@ -25,6 +25,7 @@ function toInterview(id: string, data: Record<string, unknown>): Interview {
     status: data.status as Interview['status'],
     availabilityPeriod: (data.availabilityPeriod as Interview['availabilityPeriod']) ?? null,
     availabilities: (data.availabilities as InterviewerAvailability[]) ?? [],
+    candidateOptions: (data.candidateOptions as CandidateOption[] | null) ?? null,
     confirmedSlot: (data.confirmedSlot as Interview['confirmedSlot']) ?? null,
     createdAt: (data.createdAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
     updatedAt: (data.updatedAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
@@ -61,6 +62,7 @@ class InterviewFirestoreRepository implements IInterviewRepository {
       ...input,
       status: 'pending_slack',
       availabilities: [],
+      candidateOptions: null,
       confirmedSlot: null,
       createdAt: now,
       updatedAt: now,
@@ -73,6 +75,31 @@ class InterviewFirestoreRepository implements IInterviewRepository {
 
   async delete(id: string): Promise<void> {
     await deleteDoc(doc(db, COLLECTIONS.INTERVIEWS, id))
+  }
+
+  async addAvailability(
+    interviewId: string,
+    availability: InterviewerAvailability,
+    interviewerIds: string[],
+  ): Promise<void> {
+    const ref = doc(db, COLLECTIONS.INTERVIEWS, interviewId)
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref)
+      if (!snap.exists()) throw new Error('면접 건을 찾을 수 없습니다.')
+      const interview = toInterview(snap.id, snap.data() as Record<string, unknown>)
+      const filtered = interview.availabilities.filter(
+        (a) => a.interviewerId !== availability.interviewerId,
+      )
+      const updated = [...filtered, availability]
+      const allSubmitted = interviewerIds.every((id) =>
+        updated.some((a) => a.interviewerId === id),
+      )
+      tx.update(ref, {
+        availabilities: updated,
+        status: allSubmitted ? 'ready_to_schedule' : 'collecting',
+        updatedAt: serverTimestamp(),
+      })
+    })
   }
 }
 

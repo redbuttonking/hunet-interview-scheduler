@@ -9,10 +9,11 @@ import { Interview, InterviewStatus } from '@/domain/model/Interview'
 import { useInterviews } from '@/application/usecase/interview/useInterviews'
 
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string }> = {
-  pending_slack:     { label: '슬랙 발송 전',  className: 'bg-muted text-muted-foreground' },
-  collecting:        { label: '수집 중',        className: 'bg-blue-50 text-blue-700' },
-  ready_to_schedule: { label: '일정 추천 가능', className: 'bg-emerald-50 text-emerald-700' },
-  confirmed:         { label: '확정',           className: 'bg-primary/10 text-primary' },
+  pending_slack:     { label: '슬랙 발송 전',    className: 'bg-muted text-muted-foreground' },
+  collecting:        { label: '수집 중',          className: 'bg-blue-50 text-blue-700' },
+  ready_to_schedule: { label: '일정 추천 가능',   className: 'bg-emerald-50 text-emerald-700' },
+  pending_candidate: { label: '후보자 응답 대기', className: 'bg-amber-50 text-amber-700' },
+  confirmed:         { label: '확정',             className: 'bg-primary/10 text-primary' },
 }
 
 type WeekFilter = 'this_week' | 'next_week' | 'all'
@@ -28,6 +29,7 @@ const PENDING_ORDER: Record<Exclude<InterviewStatus, 'confirmed'>, number> = {
   pending_slack: 0,
   collecting: 1,
   ready_to_schedule: 2,
+  pending_candidate: 3,
 }
 
 const PENDING_FILTERS: { value: PendingFilter; label: string }[] = [
@@ -35,6 +37,7 @@ const PENDING_FILTERS: { value: PendingFilter; label: string }[] = [
   { value: 'pending_slack', label: '슬랙 발송 전' },
   { value: 'collecting', label: '수집 중' },
   { value: 'ready_to_schedule', label: '일정 추천 가능' },
+  { value: 'pending_candidate', label: '후보자 응답 대기' },
 ]
 
 function localDateStr(): string {
@@ -80,7 +83,8 @@ export default function DashboardView() {
           (iv) =>
             iv.status === 'pending_slack' ||
             iv.status === 'collecting' ||
-            iv.status === 'ready_to_schedule',
+            iv.status === 'ready_to_schedule' ||
+            iv.status === 'pending_candidate',
         )
         .sort(
           (a, b) =>

@@ -5,11 +5,10 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  getDoc,
   query,
   where,
   serverTimestamp,
-  writeBatch,
+  runTransaction,
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
@@ -20,6 +19,7 @@ import {
   CreateReservationInput,
   UpdateReservationInput,
   ConfirmSlotInput,
+  ProposeOptionInput,
 } from '@/domain/repository/IRoomReservationRepository'
 
 function toReservation(id: string, data: Record<string, unknown>): RoomReservation {
@@ -73,48 +73,179 @@ export const roomReservationRepository: IRoomReservationRepository = {
     await deleteDoc(doc(db, COLLECTIONS.ROOM_RESERVATIONS, id))
   },
 
+  async findByInterviewId(interviewId: string): Promise<RoomReservation[]> {
+    const q = query(
+      collection(db, COLLECTIONS.ROOM_RESERVATIONS),
+      where('interviewId', '==', interviewId),
+    )
+    const snap = await getDocs(q)
+    return snap.docs.map((d) => toReservation(d.id, d.data() as Record<string, unknown>))
+  },
+
   async confirmSlots(slots: ConfirmSlotInput[]): Promise<void> {
     const col = collection(db, COLLECTIONS.ROOM_RESERVATIONS)
-    const batch = writeBatch(db)
 
+    // 원데이 인터뷰처럼 같은 블록에서 여러 세션을 확정하는 경우 그룹핑
+    const blockMap = new Map<string, ConfirmSlotInput[]>()
     for (const slot of slots) {
-      const originalRef = doc(db, COLLECTIONS.ROOM_RESERVATIONS, slot.reservationId)
-      const originalSnap = await getDoc(originalRef)
-      if (!originalSnap.exists()) throw new Error(`예약을 찾을 수 없습니다: ${slot.reservationId}`)
-
-      const d = originalSnap.data() as Record<string, unknown>
-      const roomId = d.roomId as string
-      const roomName = d.roomName as string
-      const blockStart = d.startTime as string
-      const blockEnd = d.endTime as string
-
-      if (blockStart < slot.confirmedStart) {
-        batch.set(doc(col), {
-          roomId, roomName, date: slot.date,
-          startTime: blockStart, endTime: slot.confirmedStart,
-          status: 'reserved', interviewId: null,
-          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-        })
-      }
-
-      if (slot.confirmedEnd < blockEnd) {
-        batch.set(doc(col), {
-          roomId, roomName, date: slot.date,
-          startTime: slot.confirmedEnd, endTime: blockEnd,
-          status: 'reserved', interviewId: null,
-          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-        })
-      }
-
-      batch.update(originalRef, {
-        startTime: slot.confirmedStart,
-        endTime: slot.confirmedEnd,
-        status: 'confirmed',
-        interviewId: slot.interviewId,
-        updatedAt: serverTimestamp(),
-      })
+      if (!blockMap.has(slot.reservationId)) blockMap.set(slot.reservationId, [])
+      blockMap.get(slot.reservationId)!.push(slot)
     }
+    const blockIds = [...blockMap.keys()]
 
-    await batch.commit()
+    await runTransaction(db, async (tx) => {
+      const blockRefs = blockIds.map((id) => doc(db, COLLECTIONS.ROOM_RESERVATIONS, id))
+      const snaps = await Promise.all(blockRefs.map((ref) => tx.get(ref)))
+
+      snaps.forEach((snap, i) => {
+        if (!snap.exists()) throw new Error(`예약을 찾을 수 없습니다: ${blockIds[i]}`)
+      })
+
+      snaps.forEach((snap, i) => {
+        const blockRef = blockRefs[i]
+        const d = snap.data() as Record<string, unknown>
+        const roomId = d.roomId as string
+        const roomName = d.roomName as string
+        const date = d.date as string
+        const blockStart = d.startTime as string
+        const blockEnd = d.endTime as string
+
+        const confirmedRanges = blockMap.get(blockIds[i])!
+          .sort((a, b) => a.confirmedStart.localeCompare(b.confirmedStart))
+
+        let prevEnd = blockStart
+        let firstRange = true
+
+        for (const range of confirmedRanges) {
+          if (prevEnd < range.confirmedStart) {
+            tx.set(doc(col), {
+              roomId, roomName, date,
+              startTime: prevEnd, endTime: range.confirmedStart,
+              status: 'reserved', interviewId: null,
+              createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+            })
+          }
+
+          if (firstRange) {
+            tx.update(blockRef, {
+              startTime: range.confirmedStart, endTime: range.confirmedEnd,
+              status: 'confirmed', interviewId: range.interviewId,
+              updatedAt: serverTimestamp(),
+            })
+            firstRange = false
+          } else {
+            tx.set(doc(col), {
+              roomId, roomName, date,
+              startTime: range.confirmedStart, endTime: range.confirmedEnd,
+              status: 'confirmed', interviewId: range.interviewId,
+              createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+            })
+          }
+
+          prevEnd = range.confirmedEnd
+        }
+
+        if (prevEnd < blockEnd) {
+          tx.set(doc(col), {
+            roomId, roomName, date,
+            startTime: prevEnd, endTime: blockEnd,
+            status: 'reserved', interviewId: null,
+            createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+          })
+        }
+      })
+    })
+  },
+
+  async proposeSlots(options: ProposeOptionInput[], interviewId: string): Promise<ProposeOptionInput[]> {
+    const col = collection(db, COLLECTIONS.ROOM_RESERVATIONS)
+
+    // 블록별로 필요한 슬롯 그룹핑 (같은 블록에서 여러 옵션 선택 가능)
+    const blockMap = new Map<string, { optionIdx: number; slotIdx: number; startTime: string; endTime: string }[]>()
+    options.forEach((opt, oi) => {
+      opt.slots.forEach((slot, si) => {
+        if (!blockMap.has(slot.reservationId)) blockMap.set(slot.reservationId, [])
+        blockMap.get(slot.reservationId)!.push({ optionIdx: oi, slotIdx: si, startTime: slot.startTime, endTime: slot.endTime })
+      })
+    })
+
+    const blockIds = [...blockMap.keys()]
+    const resultIdMap = new Map<string, string>()
+
+    await runTransaction(db, async (tx) => {
+      const blockRefs = blockIds.map((id) => doc(db, COLLECTIONS.ROOM_RESERVATIONS, id))
+      const snaps = await Promise.all(blockRefs.map((ref) => tx.get(ref)))
+
+      snaps.forEach((snap, i) => {
+        if (!snap.exists()) throw new Error(`예약을 찾을 수 없습니다: ${blockIds[i]}`)
+      })
+
+      snaps.forEach((snap, i) => {
+        const blockId = blockIds[i]
+        const blockRef = blockRefs[i]
+        const d = snap.data() as Record<string, unknown>
+        const roomId = d.roomId as string
+        const roomName = d.roomName as string
+        const date = d.date as string
+        const blockStart = d.startTime as string
+        const blockEnd = d.endTime as string
+
+        const coordRanges = blockMap.get(blockId)!
+          .sort((a, b) => a.startTime.localeCompare(b.startTime))
+
+        let prevEnd = blockStart
+        let firstRange = true
+
+        for (const range of coordRanges) {
+          if (prevEnd < range.startTime) {
+            tx.set(doc(col), {
+              roomId, roomName, date,
+              startTime: prevEnd, endTime: range.startTime,
+              status: 'reserved', interviewId: null,
+              createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+            })
+          }
+
+          const key = `${range.optionIdx},${range.slotIdx}`
+          if (firstRange) {
+            tx.update(blockRef, {
+              startTime: range.startTime, endTime: range.endTime,
+              status: 'coordinating', interviewId,
+              updatedAt: serverTimestamp(),
+            })
+            resultIdMap.set(key, blockId)
+            firstRange = false
+          } else {
+            const newRef = doc(col)
+            tx.set(newRef, {
+              roomId, roomName, date,
+              startTime: range.startTime, endTime: range.endTime,
+              status: 'coordinating', interviewId,
+              createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+            })
+            resultIdMap.set(key, newRef.id)
+          }
+
+          prevEnd = range.endTime
+        }
+
+        if (prevEnd < blockEnd) {
+          tx.set(doc(col), {
+            roomId, roomName, date,
+            startTime: prevEnd, endTime: blockEnd,
+            status: 'reserved', interviewId: null,
+            createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+          })
+        }
+      })
+    })
+
+    return options.map((opt, oi) => ({
+      date: opt.date,
+      slots: opt.slots.map((slot, si) => ({
+        ...slot,
+        reservationId: resultIdMap.get(`${oi},${si}`) ?? slot.reservationId,
+      })),
+    }))
   },
 }

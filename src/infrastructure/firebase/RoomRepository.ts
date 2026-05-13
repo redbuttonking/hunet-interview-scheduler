@@ -15,8 +15,6 @@ import { IRoomRepository } from '@/domain/repository/IRoomRepository'
 
 const DEFAULT_ROOMS = ['행복룸', '열정룸', '게임체인저', '의문당', 'Zoom']
 
-let seeded = false
-
 function toRoom(id: string, data: Record<string, unknown>): Room {
   return {
     id,
@@ -69,9 +67,6 @@ export const roomRepository: IRoomRepository = {
   },
 
   async seedDefaults(): Promise<void> {
-    if (seeded) return
-    seeded = true
-
     const snap = await getDocs(collection(db, COLLECTIONS.ROOMS))
 
     // 중복 제거

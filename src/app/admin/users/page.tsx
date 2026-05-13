@@ -1,5 +1,5 @@
-import UserManagementPage from '@/presentation/components/admin/UserManagementPage'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return <UserManagementPage />
+  redirect('/settings')
 }

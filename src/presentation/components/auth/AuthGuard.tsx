@@ -16,7 +16,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       router.replace('/login')
       return
     }
-    if (user.role !== 'admin' && pathname.startsWith('/admin')) {
+    const isAdminOnly = pathname.startsWith('/admin') || pathname.startsWith('/settings')
+    if (user.role !== 'admin' && isAdminOnly) {
       router.replace('/dashboard')
     }
   }, [user, loading, router, pathname])
@@ -29,8 +30,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     )
   }
 
+  const isAdminOnly = pathname.startsWith('/admin') || pathname.startsWith('/settings')
   if (!user) return null
-  if (user.role !== 'admin' && pathname.startsWith('/admin')) return null
+  if (user.role !== 'admin' && isAdminOnly) return null
 
   return <>{children}</>
 }

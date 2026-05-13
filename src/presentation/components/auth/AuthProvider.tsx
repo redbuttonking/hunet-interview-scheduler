@@ -35,12 +35,14 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
-  const lastActivityRef = useRef(Date.now())
+  const lastActivityRef = useRef(0)
 
   // 비활성 자동 로그아웃: 1시간 동안 아무 동작 없으면 로그아웃
   useEffect(() => {
     if (!user) return
 
+    // 로그인(또는 마운트) 시점을 기준으로 활동 시간 초기화
+    lastActivityRef.current = Date.now()
     const updateActivity = () => { lastActivityRef.current = Date.now() }
     ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, updateActivity, { passive: true }))
 

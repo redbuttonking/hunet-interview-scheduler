@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Briefcase, Users, CalendarClock, Calendar, LogOut, X, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, CalendarClock, Calendar, LogOut, X, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthContext } from './auth/AuthProvider'
 
@@ -53,7 +53,7 @@ export default function Sidebar({ open, onClose }: Props) {
       </div>
 
       {/* 네비게이션 */}
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5">
+      <nav className="flex-1 px-3 py-4 flex flex-col gap-1.5">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive = pathname.startsWith(href)
           return (
@@ -74,16 +74,16 @@ export default function Sidebar({ open, onClose }: Props) {
         })}
         {user?.role === 'admin' && (
           <Link
-            href="/admin/users"
+            href="/settings"
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-              pathname.startsWith('/admin')
+              pathname.startsWith('/settings')
                 ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
                 : 'text-sidebar-foreground hover:bg-sidebar-accent',
             )}
           >
-            <ShieldCheck size={16} className={pathname.startsWith('/admin') ? 'opacity-90' : 'opacity-60'} />
-            계정 관리
+            <Settings size={16} className={pathname.startsWith('/settings') ? 'opacity-90' : 'opacity-60'} />
+            설정
           </Link>
         )}
       </nav>

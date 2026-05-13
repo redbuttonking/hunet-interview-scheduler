@@ -16,3 +16,4 @@ const app: FirebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) 
 
 export const db: Firestore = getFirestore(app)
 export const auth: Auth = getAuth(app)
+auth.languageCode = 'ko'

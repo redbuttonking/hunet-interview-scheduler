@@ -1,4 +1,4 @@
-import { Interview, InterviewStatus, InterviewerAvailability } from '../model/Interview'
+import { Interview, InterviewStatus, InterviewerAvailability, CandidateOption } from '../model/Interview'
 import { Round } from '../model/Position'
 
 export interface CreateInterviewInput {
@@ -18,6 +18,7 @@ export interface UpdateInterviewInput {
   interviewersByRound?: Partial<Record<Round, string[]>>
   availabilities?: InterviewerAvailability[]
   confirmedSlot?: Interview['confirmedSlot']
+  candidateOptions?: CandidateOption[] | null
 }
 
 export interface IInterviewRepository {
@@ -26,4 +27,10 @@ export interface IInterviewRepository {
   create(input: CreateInterviewInput): Promise<Interview>
   update(id: string, input: UpdateInterviewInput): Promise<void>
   delete(id: string): Promise<void>
+  /** 가용 일정을 트랜잭션으로 추가 — 동시 제출 시 데이터 유실 방지 */
+  addAvailability(
+    interviewId: string,
+    availability: InterviewerAvailability,
+    interviewerIds: string[],
+  ): Promise<void>
 }

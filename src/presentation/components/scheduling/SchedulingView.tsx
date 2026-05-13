@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2, RotateCcw, FileText } from 'lucide-react'
+import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2, RotateCcw, FileText, Users, Zap, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
@@ -13,6 +13,8 @@ import { useInterviewers } from '@/application/usecase/interviewer/useInterviewe
 import InterviewCreateModal from './InterviewCreateModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
 import ScheduleRecommendModal from './ScheduleRecommendModal'
+import CandidateOptionsModal from './CandidateOptionsModal'
+import CandidateChoiceModal from './CandidateChoiceModal'
 import SlackSendModal from './SlackSendModal'
 import SlackTemplateModal from './SlackTemplateModal'
 
@@ -20,6 +22,7 @@ const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string 
   pending_slack: { label: '슬랙 발송 전', className: 'bg-muted text-muted-foreground' },
   collecting: { label: '수집 중', className: 'bg-blue-50 text-blue-700' },
   ready_to_schedule: { label: '일정 추천 가능', className: 'bg-emerald-50 text-emerald-700' },
+  pending_candidate: { label: '후보자 응답 대기', className: 'bg-amber-50 text-amber-700' },
   confirmed: { label: '확정', className: 'bg-primary/10 text-primary' },
 }
 
@@ -30,6 +33,7 @@ const FILTER_OPTIONS: { value: FilterStatus; label: string }[] = [
   { value: 'pending_slack', label: '슬랙 발송 전' },
   { value: 'collecting', label: '수집 중' },
   { value: 'ready_to_schedule', label: '일정 추천 가능' },
+  { value: 'pending_candidate', label: '후보자 응답 대기' },
   { value: 'confirmed', label: '확정' },
 ]
 
@@ -37,7 +41,8 @@ const STATUS_ORDER: Record<InterviewStatus, number> = {
   pending_slack: 0,
   collecting: 1,
   ready_to_schedule: 2,
-  confirmed: 3,
+  pending_candidate: 3,
+  confirmed: 4,
 }
 
 interface AvailabilityModalState {
@@ -58,6 +63,8 @@ export default function SchedulingView() {
   const [createOpen, setCreateOpen] = useState(false)
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
   const [recommendModal, setRecommendModal] = useState<RecommendModalState | null>(null)
+  const [proposeModal, setProposeModal] = useState<Interview | null>(null)
+  const [choiceModal, setChoiceModal] = useState<Interview | null>(null)
   const [slackModal, setSlackModal] = useState<Interview | null>(null)
   const [templateOpen, setTemplateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Interview | null>(null)
@@ -346,17 +353,65 @@ export default function SchedulingView() {
                   </div>
                 )}
 
-                {/* ready_to_schedule: 추천 버튼 */}
+                {/* ready_to_schedule: 즉시 확정 / 후보자 옵션 발송 */}
                 {interview.status === 'ready_to_schedule' && (
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-4 flex justify-end gap-2">
                     <Button
                       size="sm"
+                      variant="outline"
                       className="gap-1.5"
                       onClick={() => setRecommendModal({ interview })}
                     >
-                      <CalendarDays size={13} />
-                      일정 추천
+                      <Zap size={13} />
+                      즉시 확정
                     </Button>
+                    <Button
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => setProposeModal(interview)}
+                    >
+                      <Users size={13} />
+                      조율 시작
+                    </Button>
+                  </div>
+                )}
+
+                {/* pending_candidate: 발송된 옵션 목록 + 후보자 확정 */}
+                {interview.status === 'pending_candidate' && (
+                  <div className="mt-3">
+                    {interview.candidateOptions && interview.candidateOptions.length > 0 && (
+                      <div className="mb-3 space-y-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">조율 중인 옵션</p>
+                        {interview.candidateOptions.map((opt, i) => (
+                          <div key={i} className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                            <span className="font-semibold">옵션 {i + 1}</span>
+                            {' · '}
+                            {opt.date}
+                            {' '}
+                            {opt.slots[0].startTime}~{opt.slots[opt.slots.length - 1].endTime}
+                            {' · '}
+                            {opt.slots.map((s) => s.roomName).join(', ')}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setRevertTarget(interview)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <RotateCcw size={11} />
+                        조율 취소
+                      </button>
+                      <Button
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => setChoiceModal(interview)}
+                      >
+                        <CheckCircle2 size={13} />
+                        후보자 확정
+                      </Button>
+                    </div>
                   </div>
                 )}
 
@@ -426,15 +481,33 @@ export default function SchedulingView() {
         />
       )}
 
+      {proposeModal && (
+        <CandidateOptionsModal
+          open={!!proposeModal}
+          onOpenChange={(o) => !o && setProposeModal(null)}
+          interview={proposeModal}
+        />
+      )}
+
+      {choiceModal && (
+        <CandidateChoiceModal
+          open={!!choiceModal}
+          onOpenChange={(o) => !o && setChoiceModal(null)}
+          interview={choiceModal}
+        />
+      )}
+
       {/* 확정 취소 확인 */}
       <Dialog open={revertTarget !== null} onOpenChange={(o) => !o && setRevertTarget(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>확정 취소</DialogTitle>
+            <DialogTitle>
+              {revertTarget?.status === 'pending_candidate' ? '조율 취소' : '확정 취소'}
+            </DialogTitle>
             <DialogDescription>
-              <span className="font-semibold text-foreground">{revertTarget?.candidateName}</span>님의
-              확정된 일정을 취소하시겠습니까? 회의실 예약도 함께 해제되고,
-              &apos;일정 추천 가능&apos; 상태로 돌아갑니다.
+              <span className="font-semibold text-foreground">{revertTarget?.candidateName}</span>님의{' '}
+              {revertTarget?.status === 'pending_candidate' ? '조율 중인 일정을 취소' : '확정된 일정을 취소'}하시겠습니까?
+              회의실 예약도 함께 해제되고 &apos;일정 추천 가능&apos; 상태로 돌아갑니다.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-2">
@@ -444,7 +517,9 @@ export default function SchedulingView() {
               onClick={handleRevert}
               disabled={revertConfirmation.isPending}
             >
-              {revertConfirmation.isPending ? '처리 중...' : '확정 취소'}
+              {revertConfirmation.isPending
+                ? '처리 중...'
+                : revertTarget?.status === 'pending_candidate' ? '조율 취소' : '확정 취소'}
             </Button>
           </div>
         </DialogContent>

@@ -1,9 +1,22 @@
 import { WebClient } from '@slack/web-api'
 import { NextRequest, NextResponse } from 'next/server'
+import { adminAuth } from '@/infrastructure/firebase/adminConfig'
 
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN)
 
+async function verifyAuth(req: NextRequest): Promise<void> {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
+  if (!token) throw new Error('인증 필요')
+  await adminAuth().verifyIdToken(token)
+}
+
 export async function POST(req: NextRequest) {
+  try {
+    await verifyAuth(req)
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 401 })
+  }
+
   const { slackIds, message } = (await req.json()) as {
     slackIds: string[]
     message: string
@@ -17,7 +30,8 @@ export async function POST(req: NextRequest) {
   for (const id of slackIds) {
     try {
       await slack.chat.postMessage({ channel: id, text: message })
-    } catch {
+    } catch (e) {
+      console.error(`슬랙 발송 실패 [${id}]:`, (e as Error).message)
       errors.push(id)
     }
   }

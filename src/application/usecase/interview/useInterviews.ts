@@ -1,21 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { getIdToken } from 'firebase/auth'
+import { auth } from '@/infrastructure/firebase/config'
 import { interviewRepository } from '@/infrastructure/firebase/InterviewRepository'
 import { roomReservationRepository } from '@/infrastructure/firebase/RoomReservationRepository'
 import { CreateInterviewInput, UpdateInterviewInput } from '@/domain/repository/IInterviewRepository'
-import { UpdateReservationInput } from '@/domain/repository/IRoomReservationRepository'
-import { Interview, InterviewerAvailability } from '@/domain/model/Interview'
+import { UpdateReservationInput, ProposeOptionInput } from '@/domain/repository/IRoomReservationRepository'
+import { Interview, InterviewerAvailability, CandidateOption } from '@/domain/model/Interview'
 import { RoomReservation } from '@/domain/model/Room'
 import { RecommendedSchedule } from '@/domain/service/ScheduleRecommendService'
 
 async function resetReservation(interview: Interview): Promise<void> {
-  if (!interview.confirmedSlot) return
-  const reservations = await roomReservationRepository.findByDateRange(
-    interview.confirmedSlot.date,
-    interview.confirmedSlot.date,
-  )
-  const targets = reservations.filter((r) => r.interviewId === interview.id)
+  const reservations = await roomReservationRepository.findByInterviewId(interview.id)
+  if (!reservations.length) return
   await Promise.all(
-    targets.map((r) => roomReservationRepository.update(r.id, { status: 'reserved', interviewId: null })),
+    reservations.map((r) => roomReservationRepository.update(r.id, { status: 'reserved', interviewId: null })),
   )
 }
 
@@ -69,6 +67,7 @@ export function useRevertConfirmation() {
       return interviewRepository.update(interview.id, {
         status: 'ready_to_schedule',
         confirmedSlot: null,
+        candidateOptions: null,
       })
     },
     onSuccess: () => {
@@ -81,7 +80,7 @@ export function useRevertConfirmation() {
 export function useSubmitAvailability() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({
+    mutationFn: ({
       interviewId,
       interviewerIds,
       availability,
@@ -89,23 +88,7 @@ export function useSubmitAvailability() {
       interviewId: string
       interviewerIds: string[]
       availability: InterviewerAvailability
-    }) => {
-      const interview = await interviewRepository.findById(interviewId)
-      if (!interview) throw new Error('면접 건을 찾을 수 없습니다.')
-
-      const filtered = interview.availabilities.filter(
-        (a) => a.interviewerId !== availability.interviewerId,
-      )
-      const updated = [...filtered, availability]
-      const allSubmitted = interviewerIds.every((id) =>
-        updated.some((a) => a.interviewerId === id),
-      )
-
-      return interviewRepository.update(interviewId, {
-        availabilities: updated,
-        status: allSubmitted ? 'ready_to_schedule' : 'collecting',
-      })
-    },
+    }) => interviewRepository.addAvailability(interviewId, availability, interviewerIds),
     onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
   })
 }
@@ -122,9 +105,11 @@ export function useSendSlack() {
       slackIds: string[]
       message: string
     }) => {
+      if (!auth.currentUser) throw new Error('로그인이 필요합니다.')
+      const token = await getIdToken(auth.currentUser)
       const res = await fetch('/api/slack/notify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ slackIds, message }),
       })
       if (!res.ok) {
@@ -190,6 +175,83 @@ export function useUpdateConfirmedReservation() {
           startTime: summaryStart,
           endTime: summaryEnd,
           slots: updatedSlots,
+        },
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INTERVIEWS_KEY })
+      qc.invalidateQueries({ queryKey: ['reservations'] })
+    },
+  })
+}
+
+/** 조율 시작: 선택한 슬롯을 조율중으로 분할하고 인터뷰를 pending_candidate로 전환 */
+export function useProposeCandidateOptions() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      interviewId,
+      options,
+    }: {
+      interviewId: string
+      options: ProposeOptionInput[]
+    }) => {
+      const updatedOptions = await roomReservationRepository.proposeSlots(options, interviewId)
+      return interviewRepository.update(interviewId, {
+        status: 'pending_candidate',
+        candidateOptions: updatedOptions,
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INTERVIEWS_KEY })
+      qc.invalidateQueries({ queryKey: ['reservations'] })
+    },
+  })
+}
+
+/** 후보자 선택 확정: 선택한 옵션 회의실 confirmed, 나머지 coordinating → reserved 복원 */
+export function useConfirmCandidateChoice() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      interview,
+      chosenOption,
+    }: {
+      interview: Interview
+      chosenOption: CandidateOption
+    }) => {
+      const chosenIds = new Set(chosenOption.slots.map((s) => s.reservationId))
+
+      // candidateOptions에서 모든 coordinating ID 수집 — Firestore 재조회 불필요
+      const allCoordinatingIds = [
+        ...new Set(
+          (interview.candidateOptions ?? []).flatMap((opt) => opt.slots.map((s) => s.reservationId)),
+        ),
+      ]
+
+      // 선택 → confirmed, 나머지 → reserved 동시 처리
+      await Promise.all([
+        ...chosenOption.slots.map((s) =>
+          roomReservationRepository.update(s.reservationId, { status: 'confirmed' }),
+        ),
+        ...allCoordinatingIds
+          .filter((id) => !chosenIds.has(id))
+          .map((id) => roomReservationRepository.update(id, { status: 'reserved', interviewId: null })),
+      ])
+
+      return interviewRepository.update(interview.id, {
+        status: 'confirmed',
+        candidateOptions: null,
+        confirmedSlot: {
+          date: chosenOption.date,
+          startTime: chosenOption.slots[0].startTime,
+          endTime: chosenOption.slots[chosenOption.slots.length - 1].endTime,
+          slots: chosenOption.slots.map((s) => ({
+            startTime: s.startTime,
+            endTime: s.endTime,
+            roomId: s.roomId,
+            roomName: s.roomName,
+          })),
         },
       })
     },

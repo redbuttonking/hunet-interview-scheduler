@@ -50,11 +50,11 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="name@hunet.co.kr"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                className="h-12"
               />
             </div>
             <div className="space-y-1.5">
@@ -62,14 +62,14 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="비밀번호 입력"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                className="h-12"
               />
             </div>
-            <Button type="submit" className="w-full mt-2" disabled={pending}>
+            <Button type="submit" className="w-full h-12 mt-2" disabled={pending}>
               {pending ? '로그인 중...' : '로그인'}
             </Button>
           </form>

@@ -33,7 +33,12 @@ export function useCreateUser() {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error ?? '계정 생성에 실패했습니다.')
       }
-      await sendPasswordResetEmail(auth, input.email)
+      // 계정 생성은 완료 — 이메일 실패는 치명적이지 않으므로 별도 처리
+      try {
+        await sendPasswordResetEmail(auth, input.email)
+      } catch (e) {
+        console.error('비밀번호 설정 이메일 발송 실패:', (e as Error).message)
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: USERS_KEY }),
   })
