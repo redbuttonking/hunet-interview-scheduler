@@ -3,7 +3,7 @@
 // 데이터 초기화 섹션 — 관리자 전용, 컬렉션별 선택 삭제
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, Trash2 } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -72,30 +72,31 @@ export default function DataResetSection() {
   const showDependencyWarning = hasDependencyWarning(selected)
 
   return (
-    <section className="bg-card rounded-xl border border-destructive/30 shadow-sm p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0 mt-0.5">
-            <Trash2 size={15} className="text-destructive" />
+    <div className="max-w-5xl mx-auto">
+      <section
+        role="button"
+        tabIndex={0}
+        onClick={!resetData.isPending ? openModal : undefined}
+        onKeyDown={(e) => e.key === 'Enter' && !resetData.isPending && openModal()}
+        className={cn(
+          'bg-card rounded-xl border border-destructive/30 shadow-sm p-6 transition-colors',
+          !resetData.isPending && 'cursor-pointer hover:border-destructive/60 hover:bg-destructive/[0.02]',
+        )}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0 mt-0.5">
+              <Trash2 size={15} className="text-destructive" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-foreground">데이터 초기화</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                데이터베이스에 저장된 데이터를 선택하여 영구 삭제합니다.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-bold text-foreground">데이터 초기화</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              데이터베이스에 저장된 데이터를 선택하여 영구 삭제합니다.
-            </p>
-          </div>
+          <ChevronRight size={18} className="text-muted-foreground shrink-0 mt-1" />
         </div>
-        <Button
-          variant="destructive"
-          size="sm"
-          className="shrink-0 gap-1.5"
-          onClick={openModal}
-          disabled={resetData.isPending}
-        >
-          <Trash2 size={13} />
-          데이터 초기화
-        </Button>
-      </div>
 
       <Dialog open={open} onOpenChange={(o) => !o && closeModal()}>
         <DialogContent className="sm:max-w-md">
@@ -250,6 +251,7 @@ export default function DataResetSection() {
 
         </DialogContent>
       </Dialog>
-    </section>
+      </section>
+    </div>
   )
 }
