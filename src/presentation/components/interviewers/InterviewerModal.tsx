@@ -36,7 +36,7 @@ export default function InterviewerModal({ open, onOpenChange, interviewer }: Pr
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmedName = name.trim()
-    const trimmedSlack = slackId.trim().replace(/^@/, '') // @ 자동 제거
+    const trimmedSlack = slackId.trim()
 
     if (!trimmedName || !trimmedSlack) return
 
@@ -74,17 +74,17 @@ export default function InterviewerModal({ open, onOpenChange, interviewer }: Pr
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="slackId">슬랙 ID</Label>
-            <div className="flex items-center gap-1">
-              <span className="text-muted-foreground text-sm">@</span>
-              <Input
-                id="slackId"
-                value={slackId}
-                onChange={(e) => setSlackId(e.target.value)}
-                placeholder="gildong.hong"
-                required
-              />
-            </div>
+            <Label htmlFor="slackId">슬랙 멤버 ID</Label>
+            <Input
+              id="slackId"
+              value={slackId}
+              onChange={(e) => setSlackId(e.target.value)}
+              placeholder="U0123456789"
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Slack 프로필 → 더보기(⋯) → <strong>멤버 ID 복사</strong>에서 확인
+            </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
