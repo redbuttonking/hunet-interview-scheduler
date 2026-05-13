@@ -19,9 +19,9 @@ const DAY_RANGE = DAY_END - DAY_START
 const HOURS = Array.from({ length: 10 }, (_, i) => 9 + i)
 
 const STATUS_STYLE: Record<ReservationStatus, { block: string; text: string }> = {
-  reserved:    { block: 'bg-amber-100 border-amber-300',   text: 'text-amber-800'   },
-  coordinating:{ block: 'bg-blue-100 border-blue-300',     text: 'text-blue-800'    },
-  confirmed:   { block: 'bg-emerald-100 border-emerald-300', text: 'text-emerald-800' },
+  reserved:    { block: 'bg-amber-100 border-amber-300',     text: 'text-amber-800'   },
+  coordinating:{ block: 'bg-emerald-100 border-emerald-300', text: 'text-emerald-800' },
+  confirmed:   { block: 'bg-blue-100 border-blue-300',       text: 'text-blue-800'    },
 }
 const STATUS_LABEL: Record<ReservationStatus, string> = {
   reserved:    '예약됨',
@@ -290,7 +290,9 @@ export default function DayView({
                               {res.startTime} ~ {res.endTime}
                             </p>
                             <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
-                              {candidateName ?? STATUS_LABEL[res.status]}
+                              {candidateName
+                                ? (res.status === 'coordinating' ? `${candidateName} 조율중` : candidateName)
+                                : STATUS_LABEL[res.status]}
                             </p>
                           </div>
                         </div>

@@ -21,9 +21,9 @@ import SlackTemplateModal from './SlackTemplateModal'
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string }> = {
   pending_slack: { label: '슬랙 발송 전', className: 'bg-muted text-muted-foreground' },
   collecting: { label: '수집 중', className: 'bg-blue-50 text-blue-700' },
-  ready_to_schedule: { label: '일정 추천 가능', className: 'bg-emerald-50 text-emerald-700' },
-  pending_candidate: { label: '후보자 응답 대기', className: 'bg-amber-50 text-amber-700' },
-  confirmed: { label: '확정', className: 'bg-primary/10 text-primary' },
+  ready_to_schedule: { label: '일정 추천 가능', className: 'bg-amber-50 text-amber-700' },
+  pending_candidate: { label: '후보자 응답 대기', className: 'bg-emerald-50 text-emerald-700' },
+  confirmed: { label: '확정', className: 'bg-blue-50 text-blue-700' },
 }
 
 type FilterStatus = 'all' | InterviewStatus
@@ -383,7 +383,7 @@ export default function SchedulingView() {
                       <div className="mb-3 space-y-1.5">
                         <p className="text-xs font-medium text-muted-foreground">조율 중인 옵션</p>
                         {interview.candidateOptions.map((opt, i) => (
-                          <div key={i} className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                          <div key={i} className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
                             <span className="font-semibold">옵션 {i + 1}</span>
                             {' · '}
                             {opt.date}
@@ -417,10 +417,10 @@ export default function SchedulingView() {
 
                 {/* confirmed: 확정 정보 */}
                 {interview.status === 'confirmed' && interview.confirmedSlot && (
-                  <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+                  <div className="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-semibold text-primary">확정 완료</p>
+                        <p className="font-semibold text-blue-700">확정 완료</p>
                         <p className="text-foreground mt-1">
                           {interview.confirmedSlot.date}&nbsp;
                           {interview.confirmedSlot.startTime} ~ {interview.confirmedSlot.endTime}

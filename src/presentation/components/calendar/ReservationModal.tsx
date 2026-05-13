@@ -145,15 +145,15 @@ export default function ReservationModal({
 
         {/* 확정 인터뷰 안내 */}
         {isConfirmedInterview && candidateName && (
-          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800">
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-800">
             확정된 인터뷰 예약입니다 — <span className="font-semibold">{candidateName}</span>
           </div>
         )}
         {/* 조율 중인 예약 안내 */}
         {isCoordinatingInterview && (
-          <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-800">
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800">
             조율 중인 인터뷰 예약입니다{candidateName ? ` — ` : ''}{candidateName && <span className="font-semibold">{candidateName}</span>}
-            <p className="text-xs mt-0.5 text-blue-600">일정 조율 화면에서 조율을 취소한 뒤 수정할 수 있습니다.</p>
+            <p className="text-xs mt-0.5 text-emerald-600">일정 조율 화면에서 조율을 취소한 뒤 수정할 수 있습니다.</p>
           </div>
         )}
 

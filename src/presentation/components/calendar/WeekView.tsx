@@ -11,8 +11,8 @@ import RoomManageModal from './RoomManageModal'
 
 const STATUS_PILL: Record<ReservationStatus, string> = {
   reserved:    'bg-amber-100 text-amber-700 border border-amber-200',
-  coordinating:'bg-blue-100 text-blue-700 border border-blue-200',
-  confirmed:   'bg-emerald-100 text-emerald-700 border border-emerald-200',
+  coordinating:'bg-emerald-100 text-emerald-700 border border-emerald-200',
+  confirmed:   'bg-blue-100 text-blue-700 border border-blue-200',
 }
 const STATUS_LABEL: Record<ReservationStatus, string> = {
   reserved:    '예약됨',
@@ -21,8 +21,8 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
 }
 const STATUS_DOT: Record<ReservationStatus, string> = {
   reserved:    'bg-amber-400',
-  coordinating:'bg-blue-400',
-  confirmed:   'bg-emerald-400',
+  coordinating:'bg-emerald-400',
+  confirmed:   'bg-blue-400',
 }
 
 interface Props {
@@ -207,7 +207,9 @@ export default function WeekView({
                               {candidateName ? (
                                 <div>
                                   <div className="opacity-70">{res.startTime}–{res.endTime}</div>
-                                  <div className="truncate">{candidateName}</div>
+                                  <div className="truncate">
+                                    {res.status === 'coordinating' ? `${candidateName} 조율중` : candidateName}
+                                  </div>
                                 </div>
                               ) : (
                                 <span className="truncate">{res.startTime}–{res.endTime}</span>

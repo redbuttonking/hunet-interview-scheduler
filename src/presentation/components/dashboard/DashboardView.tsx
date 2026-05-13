@@ -11,9 +11,9 @@ import { useInterviews } from '@/application/usecase/interview/useInterviews'
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string }> = {
   pending_slack:     { label: '슬랙 발송 전',    className: 'bg-muted text-muted-foreground' },
   collecting:        { label: '수집 중',          className: 'bg-blue-50 text-blue-700' },
-  ready_to_schedule: { label: '일정 추천 가능',   className: 'bg-emerald-50 text-emerald-700' },
-  pending_candidate: { label: '후보자 응답 대기', className: 'bg-amber-50 text-amber-700' },
-  confirmed:         { label: '확정',             className: 'bg-primary/10 text-primary' },
+  ready_to_schedule: { label: '일정 추천 가능',   className: 'bg-amber-50 text-amber-700' },
+  pending_candidate: { label: '후보자 응답 대기', className: 'bg-emerald-50 text-emerald-700' },
+  confirmed:         { label: '확정',             className: 'bg-blue-50 text-blue-700' },
 }
 
 type WeekFilter = 'this_week' | 'next_week' | 'all'
