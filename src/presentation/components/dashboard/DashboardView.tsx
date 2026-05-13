@@ -141,7 +141,7 @@ export default function DashboardView() {
       {/* 예정된 인터뷰 */}
       <section>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="text-base font-bold text-foreground">예정된 인터뷰</h2>
+          <h2 className="text-lg font-bold text-foreground">예정된 인터뷰</h2>
           <div className="flex items-center gap-1">
             {WEEK_FILTERS.map((f) => (
               <button
@@ -173,21 +173,21 @@ export default function DashboardView() {
           {!isLoading && filteredUpcoming.length > 0 && (
             <div className="divide-y divide-border">
               {filteredUpcoming.map((iv) => (
-                <div key={iv.id} className="flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-3.5">
-                  <div className="w-16 text-xs font-semibold text-primary shrink-0">
+                <div key={iv.id} className="flex items-center gap-3 px-4 sm:px-5 py-3.5 sm:py-4">
+                  <div className="w-16 text-sm font-semibold text-primary shrink-0">
                     {formatDateKo(iv.confirmedSlot!.date)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{iv.candidateName}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {iv.positionName} · {iv.typeLabel}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-xs text-foreground">
+                    <p className="text-sm text-foreground">
                       {iv.confirmedSlot!.startTime} ~ {iv.confirmedSlot!.endTime}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {[...new Set(iv.confirmedSlot!.slots.map((s) => s.roomName))].join(' / ')}
                     </p>
                   </div>
@@ -201,7 +201,7 @@ export default function DashboardView() {
       {/* 조율 대기 */}
       <section>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="text-base font-bold text-foreground">조율 대기</h2>
+          <h2 className="text-lg font-bold text-foreground">조율 대기</h2>
           <div className="flex items-center gap-1 flex-wrap">
             {PENDING_FILTERS.map((f) => (
               <button
@@ -274,29 +274,29 @@ function PendingRow({ interview: iv }: { interview: Interview }) {
   const totalCount = iv.interviewerIds.length
 
   return (
-    <div className="flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-3.5">
-      <span className={cn('inline-flex items-center justify-center text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap w-[5.5rem] sm:w-[7rem]', cfg.className)}>
+    <div className="flex items-center gap-3 px-4 sm:px-5 py-4 sm:py-5">
+      <span className={cn('inline-flex items-center justify-center text-sm font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap w-[6rem] sm:w-[7.5rem]', cfg.className)}>
         {cfg.label}
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-foreground truncate">{iv.candidateName}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {iv.positionName} · {iv.typeLabel}
         </p>
       </div>
       <div className="shrink-0 text-right">
         {iv.status === 'collecting' && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
             {Array.from({ length: totalCount }).map((_, i) =>
               i < submittedCount
-                ? <CheckCircle2 key={i} size={12} className="text-emerald-500" />
-                : <Circle key={i} size={12} className="opacity-30" />,
+                ? <CheckCircle2 key={i} size={14} className="text-emerald-500" />
+                : <Circle key={i} size={14} className="opacity-30" />,
             )}
             <span className="ml-1">{submittedCount}/{totalCount}</span>
           </div>
         )}
         {iv.status === 'ready_to_schedule' && (
-          <Link href="/scheduling" className="text-xs text-primary hover:underline">
+          <Link href="/scheduling" className="text-sm text-primary hover:underline">
             일정 추천 →
           </Link>
         )}

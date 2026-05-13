@@ -3,7 +3,7 @@
 // 데이터 초기화 섹션 — 관리자 전용, 컬렉션별 선택 삭제
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, ChevronRight, Trash2 } from 'lucide-react'
+import { ChevronRight, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -176,10 +176,7 @@ export default function DataResetSection() {
           {step === 2 && (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-destructive">
-                  <AlertTriangle size={18} />
-                  삭제 경고
-                </DialogTitle>
+                <DialogTitle>데이터 초기화</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4 pt-1">
                 <div className="rounded-lg bg-destructive/5 border border-destructive/20 px-4 py-3 text-sm text-destructive">
@@ -212,10 +209,7 @@ export default function DataResetSection() {
           {step === 3 && (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-destructive">
-                  <AlertTriangle size={18} />
-                  최종 확인
-                </DialogTitle>
+                <DialogTitle>데이터 초기화</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4 pt-1">
                 <p className="text-sm text-muted-foreground">
