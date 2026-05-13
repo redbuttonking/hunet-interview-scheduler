@@ -72,6 +72,8 @@ export default function ReservationModal({
 }: Props) {
   const isEdit = reservation !== null
   const isConfirmedInterview = isEdit && !!reservation.interviewId && reservation.status === 'confirmed'
+  const isCoordinatingInterview = isEdit && !!reservation.interviewId && reservation.status === 'coordinating'
+  const isLockedInterview = isConfirmedInterview || isCoordinatingInterview
 
   const [roomId, setRoomId] = useState('')
   const [date, setDate] = useState('')
@@ -147,6 +149,13 @@ export default function ReservationModal({
             확정된 인터뷰 예약입니다 — <span className="font-semibold">{candidateName}</span>
           </div>
         )}
+        {/* 조율 중인 예약 안내 */}
+        {isCoordinatingInterview && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-800">
+            조율 중인 인터뷰 예약입니다{candidateName ? ` — ` : ''}{candidateName && <span className="font-semibold">{candidateName}</span>}
+            <p className="text-xs mt-0.5 text-blue-600">일정 조율 화면에서 조율을 취소한 뒤 수정할 수 있습니다.</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-1">
           {/* 회의실 */}
@@ -182,8 +191,8 @@ export default function ReservationModal({
             </div>
           </div>
 
-          {/* 상태 (확정 인터뷰는 상태 변경 불가) */}
-          {!isConfirmedInterview && (
+          {/* 상태 (확정/조율중 인터뷰는 상태 변경 불가) */}
+          {!isLockedInterview && (
             <div className="flex flex-col gap-1.5">
               <Label>상태</Label>
               <div className="flex gap-2">
@@ -227,7 +236,7 @@ export default function ReservationModal({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
                 취소
               </Button>
-              <Button type="submit" disabled={isPending || !roomId || !date}>
+              <Button type="submit" disabled={isPending || !roomId || !date || isCoordinatingInterview}>
                 {isSaving ? '저장 중...' : isEdit ? '저장' : '추가'}
               </Button>
             </div>

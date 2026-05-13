@@ -87,6 +87,10 @@ export default function CalendarView() {
     return res.status === 'confirmed' && res.interviewId !== null
   }
 
+  function isCoordinatingInterview(res: RoomReservation) {
+    return res.status === 'coordinating' && res.interviewId !== null
+  }
+
   async function handleSave(data: CreateReservationInput) {
     if (
       hasTimeOverlap(
@@ -104,6 +108,10 @@ export default function CalendarView() {
 
     try {
       if (editingReservation) {
+        if (isCoordinatingInterview(editingReservation)) {
+          toast.error('조율 중인 예약은 수정할 수 없습니다. 일정 조율에서 조율을 취소해 주세요.')
+          return
+        }
         if (isConfirmedInterview(editingReservation)) {
           // 확정 인터뷰: 예약 + confirmedSlot 동시 업데이트
           await updateConfirmedRes.mutateAsync({ old: editingReservation, input: data })
@@ -123,6 +131,10 @@ export default function CalendarView() {
 
   async function handleDelete() {
     if (!editingReservation) return
+    if (isCoordinatingInterview(editingReservation)) {
+      toast.error('조율 중인 예약은 삭제할 수 없습니다. 일정 조율에서 조율을 취소해 주세요.')
+      return
+    }
     if (isConfirmedInterview(editingReservation)) {
       toast.error('확정된 인터뷰 예약은 삭제할 수 없습니다. 일정 조율에서 확정을 취소해 주세요.')
       return
