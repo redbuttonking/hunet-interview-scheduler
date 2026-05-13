@@ -21,7 +21,6 @@ const COLLECTION_LIST: { key: ResetCollectionKey; label: string; description: st
 
 const CONFIRM_PHRASE = '선택한 항목을 초기화 합니다'
 
-/** 면접관만 삭제하고 인터뷰 조율 건을 삭제하지 않을 경우 경고 */
 function hasDependencyWarning(selected: Set<ResetCollectionKey>): boolean {
   return selected.has('interviewers') && !selected.has('interviews')
 }
@@ -71,6 +70,9 @@ export default function DataResetSection() {
   const selectedItems = COLLECTION_LIST.filter((c) => selected.has(c.key))
   const showDependencyWarning = hasDependencyWarning(selected)
 
+  // React 포털 이벤트는 실제 DOM이 아닌 React 컴포넌트 트리를 따라 버블링된다.
+  // Dialog를 클릭 가능한 section의 자식으로 두면 모달 내부 클릭이 section.onClick을
+  // 재호출하여 상태를 리셋하는 버그가 발생하므로, 두 요소를 형제(sibling)로 배치한다.
   return (
     <div className="max-w-5xl mx-auto">
       <section
@@ -97,7 +99,9 @@ export default function DataResetSection() {
           </div>
           <ChevronRight size={18} className="text-muted-foreground shrink-0 mt-1" />
         </div>
+      </section>
 
+      {/* Dialog는 section 바깥(형제)에 선언 — 이벤트 버블링 차단 */}
       <Dialog open={open} onOpenChange={(o) => !o && closeModal()}>
         <DialogContent className="sm:max-w-md">
 
@@ -111,7 +115,6 @@ export default function DataResetSection() {
                 <p className="text-sm text-muted-foreground">
                   삭제할 데이터를 선택하세요. 삭제 후에는 복구할 수 없습니다.
                 </p>
-
                 <div className="flex flex-col gap-2">
                   {COLLECTION_LIST.map((col) => (
                     <label
@@ -136,7 +139,6 @@ export default function DataResetSection() {
                     </label>
                   ))}
                 </div>
-
                 <div className="flex items-center justify-between pt-2 border-t border-border">
                   <div className="flex items-center gap-2">
                     <button
@@ -183,7 +185,6 @@ export default function DataResetSection() {
                 <div className="rounded-lg bg-destructive/5 border border-destructive/20 px-4 py-3 text-sm text-destructive">
                   아래 데이터가 <strong>영구 삭제</strong>됩니다. 복구할 수 없습니다.
                 </div>
-
                 <ul className="flex flex-col gap-1.5">
                   {selectedItems.map((col) => (
                     <li key={col.key} className="flex items-center gap-2 text-sm text-foreground">
@@ -193,15 +194,12 @@ export default function DataResetSection() {
                     </li>
                   ))}
                 </ul>
-
-                {/* 면접관만 삭제 시 의존성 경고 */}
                 {showDependencyWarning && (
                   <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                     <p className="font-semibold mb-1">⚠️ 주의: 데이터 불일치 가능성</p>
                     <p>면접관을 삭제하면 기존 인터뷰 조율 건에 저장된 면접관 정보가 유효하지 않게 됩니다. <strong>인터뷰 조율 건도 함께 삭제</strong>하는 것을 권장합니다.</p>
                   </div>
                 )}
-
                 <div className="flex justify-end gap-2 pt-1">
                   <Button variant="outline" onClick={() => setStep(1)}>뒤로</Button>
                   <Button variant="destructive" onClick={() => setStep(3)}>계속</Button>
@@ -251,7 +249,6 @@ export default function DataResetSection() {
 
         </DialogContent>
       </Dialog>
-      </section>
     </div>
   )
 }
