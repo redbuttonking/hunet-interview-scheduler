@@ -140,7 +140,14 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
     }
 
     try {
-      await sendSlack.mutateAsync({ interviewId: interview.id, slackIds: targets, message: preview })
+      await sendSlack.mutateAsync({
+        interviewId: interview.id,
+        slackIds: targets,
+        message: preview,
+        dates: activeDates.map((d) => format(d, 'yyyy-MM-dd')),
+        candidateName: interview.candidateName,
+        positionName: interview.positionName,
+      })
       toast.success(sendMode === 'channel' ? '채널에 메시지를 발송했습니다.' : `${targets.length}명에게 DM을 발송했습니다.`)
       onOpenChange(false)
     } catch (err) {

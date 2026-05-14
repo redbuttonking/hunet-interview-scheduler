@@ -100,17 +100,23 @@ export function useSendSlack() {
       interviewId,
       slackIds,
       message,
+      dates,
+      candidateName,
+      positionName,
     }: {
       interviewId: string
       slackIds: string[]
       message: string
+      dates?: string[]
+      candidateName?: string
+      positionName?: string
     }) => {
       if (!auth.currentUser) throw new Error('로그인이 필요합니다.')
       const token = await getIdToken(auth.currentUser)
       const res = await fetch('/api/slack/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ slackIds, message }),
+        body: JSON.stringify({ slackIds, message, interviewId, dates, candidateName, positionName }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data.ok === false) {
