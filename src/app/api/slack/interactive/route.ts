@@ -49,7 +49,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
 
   // 날짜별 오전/오후 체크박스 블록 생성
   const dateBlocks = buttonValue.dates.flatMap((date) => {
-    const [year, month, day] = date.split('-')
+    const [, month, day] = date.split('-')
     const d = new Date(date)
     const weekdays = ['일', '월', '화', '수', '목', '금', '토']
     const label = `${month}월 ${day}일 (${weekdays[d.getDay()]})`
@@ -138,7 +138,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
   const allAvailableAction = allAvailableBlock?.['all_available'] as { selected_options?: { value: string }[] } | undefined
   const allAvailable = allAvailableAction?.selected_options?.some((o) => o.value === 'all') ?? false
 
-  let slots: { date: string; startTime: string; endTime: string }[] = []
+  const slots: { date: string; startTime: string; endTime: string }[] = []
 
   if (!allAvailable) {
     // 날짜별 선택된 오전/오후 슬롯 수집
