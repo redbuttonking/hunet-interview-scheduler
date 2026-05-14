@@ -79,9 +79,11 @@ class InterviewFirestoreRepository implements IInterviewRepository {
 
   subscribe(callback: (interviews: Interview[]) => void): () => void {
     const q = query(this.col, orderBy('createdAt', 'desc'))
-    return onSnapshot(q, (snap) => {
-      callback(snap.docs.map((d) => toInterview(d.id, d.data())))
-    })
+    return onSnapshot(
+      q,
+      (snap) => { callback(snap.docs.map((d) => toInterview(d.id, d.data()))) },
+      (error) => { console.error('[InterviewRepository] 실시간 구독 오류:', error.message) },
+    )
   }
 
   async addAvailability(

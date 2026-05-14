@@ -68,20 +68,24 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     const messageTs = container?.message_ts as string | undefined
     const channelId = container?.channel_id as string | undefined
     if (messageTs && channelId) {
-      await slack.chat.update({
-        channel: channelId,
-        ts: messageTs,
-        text: '취소된 인터뷰 일정입니다.',
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `~*${buttonValue.candidateName}* · ${buttonValue.positionName}~\n이 인터뷰 일정은 취소되었습니다.`,
+      try {
+        await slack.chat.update({
+          channel: channelId,
+          ts: messageTs,
+          text: '취소된 인터뷰 일정입니다.',
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `~*${buttonValue.candidateName}* · ${buttonValue.positionName}~\n이 인터뷰 일정은 취소되었습니다.`,
+              },
             },
-          },
-        ],
-      })
+          ],
+        })
+      } catch (e) {
+        console.error('[slack/interactive] 메시지 업데이트 실패:', (e as Error).message)
+      }
     }
     return
   }
@@ -167,6 +171,10 @@ async function handleBlockAction(payload: Record<string, unknown>) {
             },
           ],
         },
+        {
+          type: 'context',
+          elements: [{ type: 'plain_text', text: '체크 시 아래 날짜별 선택은 무시됩니다.' }],
+        },
         { type: 'divider' },
         ...dateBlocks,
       ],
@@ -196,7 +204,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
     // 미등록 면접관 — 슬랙 프로필로 자동 등록
     const userInfo = await slack.users.info({ user: slackUserId })
     const user = userInfo.user as Record<string, unknown> | undefined
-    const name = (user?.real_name as string) ?? (user?.name as string) ?? '미지정'
+    const name = (user?.real_name as string) || (user?.name as string) || '미지정'
     const ref = await db.collection(COLLECTIONS.INTERVIEWERS).add({
       name,
       slackId: slackUserId,
@@ -281,12 +289,17 @@ export async function POST(req: NextRequest) {
   const params = new URLSearchParams(rawBody)
   const payload = JSON.parse(params.get('payload') ?? '{}') as Record<string, unknown>
 
-  if (payload.type === 'block_actions') {
-    await handleBlockAction(payload)
-  } else if (payload.type === 'view_submission') {
-    await handleViewSubmission(payload)
-    // 슬랙에 모달 닫기 응답
-    return NextResponse.json({ response_action: 'clear' })
+  try {
+    if (payload.type === 'block_actions') {
+      await handleBlockAction(payload)
+    } else if (payload.type === 'view_submission') {
+      await handleViewSubmission(payload)
+      // 슬랙에 모달 닫기 응답
+      return NextResponse.json({ response_action: 'clear' })
+    }
+  } catch (err) {
+    // 슬랙은 200이 아니면 사용자에게 dispatch_failed를 표시하므로 항상 200 반환
+    console.error('[slack/interactive] 처리 오류:', (err as Error).message)
   }
 
   return NextResponse.json({ ok: true })

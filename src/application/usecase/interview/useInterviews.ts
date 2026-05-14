@@ -34,7 +34,7 @@ export function useInterviews() {
   return useQuery({
     queryKey: INTERVIEWS_KEY,
     queryFn: () => interviewRepository.findAll(),
-    staleTime: Infinity, // 구독이 freshness를 관리하므로 자동 재조회 불필요
+    staleTime: 60 * 1000, // 구독이 주된 갱신 수단이지만 연결 끊김 대비 1분 후 재조회
   })
 }
 
@@ -129,12 +129,21 @@ export function useSendSlack() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ slackIds, message, interviewId, dates, candidateName, positionName }),
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || data.ok === false) {
-        if (data.failed?.length) throw new Error(`발송 실패 — 다음 대상에게 전달되지 않았습니다: ${data.failed.join(', ')}`)
+      const data = await res.json().catch(() => ({} as Record<string, unknown>))
+
+      // 완전 실패 (4xx/5xx) — 아무도 못 받은 경우
+      if (!res.ok) {
         throw new Error('슬랙 발송에 실패했습니다. 채널에 봇이 초대되어 있는지 확인해주세요.')
       }
-      return interviewRepository.update(interviewId, { status: 'collecting' })
+
+      // 부분 성공이든 완전 성공이든 status는 collecting으로 전환
+      await interviewRepository.update(interviewId, { status: 'collecting' })
+
+      // 실패한 대상 목록 반환 (빈 배열 = 전원 성공)
+      const partialFailures = (data.ok === false && Array.isArray(data.failed))
+        ? (data.failed as string[])
+        : []
+      return { partialFailures }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
   })

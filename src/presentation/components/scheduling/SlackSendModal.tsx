@@ -140,7 +140,7 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
     }
 
     try {
-      await sendSlack.mutateAsync({
+      const result = await sendSlack.mutateAsync({
         interviewId: interview.id,
         slackIds: targets,
         message: preview,
@@ -148,7 +148,11 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
         candidateName: interview.candidateName,
         positionName: interview.positionName,
       })
-      toast.success(sendMode === 'channel' ? '채널에 메시지를 발송했습니다.' : `${targets.length}명에게 DM을 발송했습니다.`)
+      if (result.partialFailures.length > 0) {
+        toast.warning(`일부 발송 실패 — 다음 대상에게 전달되지 않았습니다: ${result.partialFailures.join(', ')}`)
+      } else {
+        toast.success(sendMode === 'channel' ? '채널에 메시지를 발송했습니다.' : `${targets.length}명에게 DM을 발송했습니다.`)
+      }
       onOpenChange(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '발송 중 오류가 발생했습니다.')
