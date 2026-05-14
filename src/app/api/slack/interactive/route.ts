@@ -60,6 +60,32 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     positionName: string
   }
 
+  // 인터뷰 존재 확인 — 삭제된 경우 원본 메시지를 비활성화하고 종료
+  const db = adminDb()
+  const interviewSnap = await db.collection(COLLECTIONS.INTERVIEWS).doc(buttonValue.interviewId).get()
+  if (!interviewSnap.exists) {
+    const container = payload.container as Record<string, unknown> | undefined
+    const messageTs = container?.message_ts as string | undefined
+    const channelId = container?.channel_id as string | undefined
+    if (messageTs && channelId) {
+      await slack.chat.update({
+        channel: channelId,
+        ts: messageTs,
+        text: '취소된 인터뷰 일정입니다.',
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `~*${buttonValue.candidateName}* · ${buttonValue.positionName}~\n이 인터뷰 일정은 취소되었습니다.`,
+            },
+          },
+        ],
+      })
+    }
+    return
+  }
+
   // 날짜별 오전/오후 체크박스 + 직접 시간 지정 드롭다운 블록 생성
   const dateBlocks = buttonValue.dates.flatMap((date) => {
     const [, month, day] = date.split('-')
@@ -104,7 +130,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
       },
       {
         type: 'context',
-        elements: [{ type: 'plain_text', text: '직접 시간 지정 (시작 → 종료, 최대 3개)' }],
+        elements: [{ type: 'plain_text', text: '직접 시간 지정' }],
       },
       ...customSlotBlocks,
       { type: 'divider' },
@@ -165,9 +191,22 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
     .limit(1)
     .get()
 
-  if (interviewerSnap.empty) return
-
-  const interviewerId = interviewerSnap.docs[0].id
+  let interviewerId: string
+  if (interviewerSnap.empty) {
+    // 미등록 면접관 — 슬랙 프로필로 자동 등록
+    const userInfo = await slack.users.info({ user: slackUserId })
+    const user = userInfo.user as Record<string, unknown> | undefined
+    const name = (user?.real_name as string) ?? (user?.name as string) ?? '미지정'
+    const ref = await db.collection(COLLECTIONS.INTERVIEWERS).add({
+      name,
+      slackId: slackUserId,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    })
+    interviewerId = ref.id
+  } else {
+    interviewerId = interviewerSnap.docs[0].id
+  }
 
   // 전체 가능 여부 확인
   const allAvailableBlock = stateValues.values['all_available_block']
