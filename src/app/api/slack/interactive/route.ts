@@ -47,7 +47,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     positionName: string
   }
 
-  // 날짜별 오전/오후 체크박스 블록 생성
+  // 날짜별 오전/오후 체크박스 + 직접 시간 입력 블록 생성
   const dateBlocks = buttonValue.dates.flatMap((date) => {
     const [, month, day] = date.split('-')
     const d = new Date(date)
@@ -72,6 +72,27 @@ async function handleBlockAction(payload: Record<string, unknown>) {
           },
         ],
       },
+      {
+        type: 'context',
+        elements: [{ type: 'plain_text', text: '직접 입력 (시작 ~ 종료)' }],
+      },
+      {
+        type: 'actions',
+        block_id: `custom_${date}`,
+        elements: [
+          {
+            type: 'timepicker',
+            action_id: `custom_start_${date}`,
+            placeholder: { type: 'plain_text', text: '시작 시간' },
+          },
+          {
+            type: 'timepicker',
+            action_id: `custom_end_${date}`,
+            placeholder: { type: 'plain_text', text: '종료 시간' },
+          },
+        ],
+      },
+      { type: 'divider' },
     ]
   })
 
@@ -141,18 +162,30 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
   const slots: { date: string; startTime: string; endTime: string }[] = []
 
   if (!allAvailable) {
-    // 날짜별 선택된 오전/오후 슬롯 수집
+    // 날짜별 오전/오후 체크박스 + 직접 입력 시간대 수집
     for (const [blockId, actions] of Object.entries(stateValues.values)) {
-      if (!blockId.startsWith('date_')) continue
-      for (const action of Object.values(actions)) {
-        const checkboxAction = action as { selected_options?: { value: string }[] }
-        for (const option of checkboxAction.selected_options ?? []) {
-          const [date, period] = option.value.split('_')
-          slots.push({
-            date,
-            startTime: period === 'AM' ? '09:00' : '13:00',
-            endTime: period === 'AM' ? '12:00' : '18:00',
-          })
+      if (blockId.startsWith('date_')) {
+        // 오전/오후 체크박스
+        for (const action of Object.values(actions)) {
+          const checkboxAction = action as { selected_options?: { value: string }[] }
+          for (const option of checkboxAction.selected_options ?? []) {
+            const [date, period] = option.value.split('_')
+            slots.push({
+              date,
+              startTime: period === 'AM' ? '09:00' : '13:00',
+              endTime: period === 'AM' ? '12:00' : '18:00',
+            })
+          }
+        }
+      } else if (blockId.startsWith('custom_')) {
+        // 직접 입력 시간대 — 시작·종료 모두 선택된 경우만 추가
+        const date = blockId.slice('custom_'.length)
+        const startAction = actions[`custom_start_${date}`] as { selected_time?: string } | undefined
+        const endAction = actions[`custom_end_${date}`] as { selected_time?: string } | undefined
+        const startTime = startAction?.selected_time
+        const endTime = endAction?.selected_time
+        if (startTime && endTime && startTime < endTime) {
+          slots.push({ date, startTime, endTime })
         }
       }
     }
