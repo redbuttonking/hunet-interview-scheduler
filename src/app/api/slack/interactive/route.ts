@@ -7,6 +7,19 @@ import { FieldValue } from 'firebase-admin/firestore'
 
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN)
 
+// 09:00~17:30 (시작), 09:30~18:00 (종료) — 30분 단위 드롭다운 옵션
+function buildTimeOptions(startMin: number, endMin: number) {
+  const options = []
+  for (let m = startMin; m <= endMin; m += 30) {
+    const t = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+    options.push({ text: { type: 'plain_text' as const, text: t }, value: t })
+  }
+  return options
+}
+const START_OPTIONS = buildTimeOptions(9 * 60, 17 * 60 + 30)
+const END_OPTIONS = buildTimeOptions(9 * 60 + 30, 18 * 60)
+const CUSTOM_SLOT_COUNT = 3
+
 // 슬랙 서명 검증
 async function verifySlackSignature(req: NextRequest, rawBody: string): Promise<boolean> {
   const signingSecret = process.env.SLACK_SIGNING_SECRET
@@ -47,17 +60,34 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     positionName: string
   }
 
-  // 날짜별 오전/오후 체크박스 + 직접 시간 입력 블록 생성
+  // 날짜별 오전/오후 체크박스 + 직접 시간 지정 드롭다운 블록 생성
   const dateBlocks = buttonValue.dates.flatMap((date) => {
     const [, month, day] = date.split('-')
     const d = new Date(date)
     const weekdays = ['일', '월', '화', '수', '목', '금', '토']
     const label = `${month}월 ${day}일 (${weekdays[d.getDay()]})`
+
+    const customSlotBlocks = Array.from({ length: CUSTOM_SLOT_COUNT }, (_, idx) => ({
+      type: 'actions',
+      block_id: `custom_${date}_${idx}`,
+      elements: [
+        {
+          type: 'static_select',
+          action_id: `cs_${date}_${idx}`,
+          placeholder: { type: 'plain_text', text: '시작' },
+          options: START_OPTIONS,
+        },
+        {
+          type: 'static_select',
+          action_id: `ce_${date}_${idx}`,
+          placeholder: { type: 'plain_text', text: '종료' },
+          options: END_OPTIONS,
+        },
+      ],
+    }))
+
     return [
-      {
-        type: 'section',
-        text: { type: 'mrkdwn', text: `*${label}*` },
-      },
+      { type: 'section', text: { type: 'mrkdwn', text: `*${label}*` } },
       {
         type: 'actions',
         block_id: `date_${date}`,
@@ -74,24 +104,9 @@ async function handleBlockAction(payload: Record<string, unknown>) {
       },
       {
         type: 'context',
-        elements: [{ type: 'plain_text', text: '직접 입력 (시작 ~ 종료)' }],
+        elements: [{ type: 'plain_text', text: '직접 시간 지정 (시작 → 종료, 최대 3개)' }],
       },
-      {
-        type: 'actions',
-        block_id: `custom_${date}`,
-        elements: [
-          {
-            type: 'timepicker',
-            action_id: `custom_start_${date}`,
-            placeholder: { type: 'plain_text', text: '시작 시간' },
-          },
-          {
-            type: 'timepicker',
-            action_id: `custom_end_${date}`,
-            placeholder: { type: 'plain_text', text: '종료 시간' },
-          },
-        ],
-      },
+      ...customSlotBlocks,
       { type: 'divider' },
     ]
   })
@@ -165,7 +180,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
     // 날짜별 오전/오후 체크박스 + 직접 입력 시간대 수집
     for (const [blockId, actions] of Object.entries(stateValues.values)) {
       if (blockId.startsWith('date_')) {
-        // 오전/오후 체크박스
+        // 오전/오후 체크박스 — block_id: date_2026-05-19
         for (const action of Object.values(actions)) {
           const checkboxAction = action as { selected_options?: { value: string }[] }
           for (const option of checkboxAction.selected_options ?? []) {
@@ -178,12 +193,14 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
           }
         }
       } else if (blockId.startsWith('custom_')) {
-        // 직접 입력 시간대 — 시작·종료 모두 선택된 경우만 추가
-        const date = blockId.slice('custom_'.length)
-        const startAction = actions[`custom_start_${date}`] as { selected_time?: string } | undefined
-        const endAction = actions[`custom_end_${date}`] as { selected_time?: string } | undefined
-        const startTime = startAction?.selected_time
-        const endTime = endAction?.selected_time
+        // 직접 입력 — block_id: custom_2026-05-19_0
+        const parts = blockId.split('_')
+        const date = parts[1]   // '2026-05-19'
+        const idx = parts[2]    // '0' | '1' | '2'
+        const startAction = actions[`cs_${date}_${idx}`] as { selected_option?: { value: string } } | undefined
+        const endAction = actions[`ce_${date}_${idx}`] as { selected_option?: { value: string } } | undefined
+        const startTime = startAction?.selected_option?.value
+        const endTime = endAction?.selected_option?.value
         if (startTime && endTime && startTime < endTime) {
           slots.push({ date, startTime, endTime })
         }

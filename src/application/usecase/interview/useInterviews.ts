@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getIdToken } from 'firebase/auth'
 import { auth } from '@/infrastructure/firebase/config'
@@ -21,9 +22,19 @@ async function resetReservation(interview: Interview): Promise<void> {
 export const INTERVIEWS_KEY = ['interviews']
 
 export function useInterviews() {
+  const qc = useQueryClient()
+
+  // Firestore onSnapshot으로 실시간 동기화 — 면접관 제출 시 즉시 반영
+  useEffect(() => {
+    return interviewRepository.subscribe((interviews) => {
+      qc.setQueryData(INTERVIEWS_KEY, interviews)
+    })
+  }, [qc])
+
   return useQuery({
     queryKey: INTERVIEWS_KEY,
     queryFn: () => interviewRepository.findAll(),
+    staleTime: Infinity, // 구독이 freshness를 관리하므로 자동 재조회 불필요
   })
 }
 

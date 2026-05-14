@@ -33,4 +33,6 @@ export interface IInterviewRepository {
     availability: InterviewerAvailability,
     interviewerIds: string[],
   ): Promise<void>
+  /** 실시간 구독 — 데이터 변경 시 콜백 호출, 반환값은 구독 해제 함수 */
+  subscribe(callback: (interviews: Interview[]) => void): () => void
 }

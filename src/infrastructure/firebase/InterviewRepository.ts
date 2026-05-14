@@ -1,6 +1,6 @@
 import {
   collection, getDocs, addDoc, updateDoc,
-  deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, runTransaction,
+  deleteDoc, doc, getDoc, serverTimestamp, query, orderBy, runTransaction, onSnapshot,
 } from 'firebase/firestore'
 import { db } from './config'
 import { COLLECTIONS } from './collections'
@@ -75,6 +75,13 @@ class InterviewFirestoreRepository implements IInterviewRepository {
 
   async delete(id: string): Promise<void> {
     await deleteDoc(doc(db, COLLECTIONS.INTERVIEWS, id))
+  }
+
+  subscribe(callback: (interviews: Interview[]) => void): () => void {
+    const q = query(this.col, orderBy('createdAt', 'desc'))
+    return onSnapshot(q, (snap) => {
+      callback(snap.docs.map((d) => toInterview(d.id, d.data())))
+    })
   }
 
   async addAvailability(
