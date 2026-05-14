@@ -20,6 +20,7 @@ export interface Position {
   name: string
   interviewTypes: InterviewType[]
   interviewersByRound: Partial<Record<Round, string[]>>
+  slackChannelId?: string
   createdAt: Date
   updatedAt: Date
 }

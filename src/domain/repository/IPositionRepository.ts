@@ -4,12 +4,14 @@ export interface CreatePositionInput {
   name: string
   interviewTypes: InterviewType[]
   interviewersByRound: Partial<Record<Round, string[]>>
+  slackChannelId?: string
 }
 
 export interface UpdatePositionInput {
   name?: string
   interviewTypes?: InterviewType[]
   interviewersByRound?: Partial<Record<Round, string[]>>
+  slackChannelId?: string
 }
 
 export interface IPositionRepository {

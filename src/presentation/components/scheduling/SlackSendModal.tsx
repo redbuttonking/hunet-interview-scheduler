@@ -41,14 +41,17 @@ function formatDate(date: Date): string {
   return format(date, 'yyyy년 M월 d일 (eee)', { locale: ko }) + ' (오전 / 오후)'
 }
 
+type SendMode = 'channel' | 'dm'
+
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   interview: Interview
   interviewers: Interviewer[]
+  slackChannelId?: string
 }
 
-export default function SlackSendModal({ open, onOpenChange, interview, interviewers }: Props) {
+export default function SlackSendModal({ open, onOpenChange, interview, interviewers, slackChannelId }: Props) {
   const sendSlack = useSendSlack()
   const { data: template } = useSlackTemplate()
 
@@ -56,6 +59,13 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
   const [excludedDates, setExcludedDates] = useState<Set<string>>(new Set())
   const [headerTemplate, setHeaderTemplate] = useState('')
   const [footer, setFooter] = useState('')
+  const [sendMode, setSendMode] = useState<SendMode>('dm')
+  const [selectedDmIds, setSelectedDmIds] = useState<Set<string>>(new Set())
+
+  const relevantInterviewers = useMemo(
+    () => interviewers.filter((iv) => interview.interviewerIds.includes(iv.id)),
+    [interviewers, interview.interviewerIds],
+  )
 
   useEffect(() => {
     if (open && template) {
@@ -63,8 +73,11 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
       setFooter(template.footer)
       setSelectedDate('')
       setExcludedDates(new Set())
+      // 채널 ID가 있으면 채널 모드로 기본값 설정, 없으면 DM
+      setSendMode(slackChannelId ? 'channel' : 'dm')
+      setSelectedDmIds(new Set(relevantInterviewers.map((iv) => iv.id)))
     }
-  }, [open, template])
+  }, [open, template, slackChannelId, relevantInterviewers])
 
   const weekDates = useMemo(() => (selectedDate ? getWeekDates(selectedDate) : []), [selectedDate])
 
@@ -90,16 +103,20 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
     return `${filledHeader}\n\n${dateLines}\n\n${footer}`
   }, [filledHeader, footer, activeDates])
 
-  const relevantInterviewers = useMemo(
-    () => interviewers.filter((iv) => interview.interviewerIds.includes(iv.id)),
-    [interviewers, interview.interviewerIds],
-  )
-
   function toggleDate(dateStr: string) {
     setExcludedDates((prev) => {
       const next = new Set(prev)
       if (next.has(dateStr)) next.delete(dateStr)
       else next.add(dateStr)
+      return next
+    })
+  }
+
+  function toggleDmTarget(id: string) {
+    setSelectedDmIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
@@ -110,16 +127,21 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
       return
     }
 
-    const slackIds = relevantInterviewers.map((iv) => iv.slackId).filter(Boolean)
-
-    if (slackIds.length === 0) {
-      toast.error('슬랙 ID가 등록된 면접관이 없습니다. 면접관 관리 페이지에서 슬랙 ID를 입력해주세요.')
-      return
+    let targets: string[]
+    if (sendMode === 'channel') {
+      targets = [slackChannelId!]
+    } else {
+      const selected = relevantInterviewers.filter((iv) => selectedDmIds.has(iv.id))
+      targets = selected.map((iv) => iv.slackId).filter(Boolean)
+      if (targets.length === 0) {
+        toast.error('발송할 면접관을 1명 이상 선택해주세요.')
+        return
+      }
     }
 
     try {
-      await sendSlack.mutateAsync({ interviewId: interview.id, slackIds, message: preview })
-      toast.success(`${slackIds.length}명에게 메시지를 발송했습니다.`)
+      await sendSlack.mutateAsync({ interviewId: interview.id, slackIds: targets, message: preview })
+      toast.success(sendMode === 'channel' ? '채널에 메시지를 발송했습니다.' : `${targets.length}명에게 DM을 발송했습니다.`)
       onOpenChange(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '발송 중 오류가 발생했습니다.')
@@ -137,24 +159,75 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
         </DialogHeader>
 
         <div className="space-y-5 pt-2">
+          {/* 발송 방식 선택 */}
+          <div>
+            <Label className="text-sm font-medium mb-2 block">발송 방식</Label>
+            <div className="flex gap-2">
+              {slackChannelId && (
+                <button
+                  type="button"
+                  onClick={() => setSendMode('channel')}
+                  className={cn(
+                    'px-3 py-1.5 rounded-md text-sm font-medium border transition-colors',
+                    sendMode === 'channel'
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-background text-muted-foreground border-border hover:border-primary/40',
+                  )}
+                >
+                  채널 발송
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSendMode('dm')}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-sm font-medium border transition-colors',
+                  sendMode === 'dm'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background text-muted-foreground border-border hover:border-primary/40',
+                )}
+              >
+                개인 DM
+              </button>
+            </div>
+          </div>
+
           {/* 발송 대상 */}
           <div>
             <Label className="text-sm font-medium mb-1.5 block">발송 대상</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {relevantInterviewers.map((iv) => (
-                <span
-                  key={iv.id}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-xs"
-                >
-                  <span className="font-medium">{iv.name}</span>
-                  {iv.slackId ? (
-                    <span className="text-muted-foreground">{iv.slackId}</span>
-                  ) : (
-                    <span className="text-destructive font-medium">슬랙ID 없음</span>
-                  )}
-                </span>
-              ))}
-            </div>
+            {sendMode === 'channel' ? (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted text-xs w-fit">
+                <span className="text-muted-foreground">채널 ID</span>
+                <span className="font-medium font-mono">{slackChannelId}</span>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {relevantInterviewers.map((iv) => (
+                  <div key={iv.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`iv-${iv.id}`}
+                      checked={selectedDmIds.has(iv.id)}
+                      disabled={!iv.slackId}
+                      onCheckedChange={() => toggleDmTarget(iv.id)}
+                    />
+                    <label
+                      htmlFor={`iv-${iv.id}`}
+                      className={cn(
+                        'flex items-center gap-1.5 text-sm',
+                        iv.slackId ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
+                      )}
+                    >
+                      <span className="font-medium">{iv.name}</span>
+                      {iv.slackId ? (
+                        <span className="text-xs text-muted-foreground font-mono">{iv.slackId}</span>
+                      ) : (
+                        <span className="text-xs text-destructive">슬랙ID 없음</span>
+                      )}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 날짜 선택 */}

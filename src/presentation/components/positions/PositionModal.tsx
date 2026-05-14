@@ -126,6 +126,7 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
   const [name, setName] = useState('')
   const [interviewTypes, setInterviewTypes] = useState<InterviewType[]>([])
   const [ivByRound, setIvByRound] = useState<Partial<Record<Round, string[]>>>({})
+  const [slackChannelId, setSlackChannelId] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -136,10 +137,12 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
         sessions: t.sessions.map((s) => ({ rounds: [...s.rounds] })),
       })))
       setIvByRound({ ...position.interviewersByRound })
+      setSlackChannelId(position.slackChannelId ?? '')
     } else {
       setName('')
       setInterviewTypes([])
       setIvByRound({})
+      setSlackChannelId('')
     }
   }, [open, position])
 
@@ -199,7 +202,12 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
     if (interviewTypes.some((t) => t.sessions.some((s) => s.rounds.length === 0)))
       return toast.error('모든 세션에 차수를 1개 이상 선택해주세요.')
 
-    const payload = { name: name.trim(), interviewTypes, interviewersByRound: ivByRound }
+    const payload = {
+      name: name.trim(),
+      interviewTypes,
+      interviewersByRound: ivByRound,
+      slackChannelId: slackChannelId.trim() || undefined,
+    }
 
     try {
       if (isEdit) {
@@ -233,6 +241,18 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
               placeholder="예: 프론트엔드 개발자"
               required
             />
+          </div>
+
+          {/* 슬랙 채널 ID */}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="slackChannelId">슬랙 채널 ID <span className="text-muted-foreground font-normal">(선택)</span></Label>
+            <Input
+              id="slackChannelId"
+              value={slackChannelId}
+              onChange={(e) => setSlackChannelId(e.target.value)}
+              placeholder="예: C0123456789"
+            />
+            <p className="text-xs text-muted-foreground">면접관 2명 이상 시 DM 대신 이 채널로 발송됩니다. 슬랙 채널 우클릭 → Copy link에서 확인하세요.</p>
           </div>
 
           {/* 인터뷰 유형 */}

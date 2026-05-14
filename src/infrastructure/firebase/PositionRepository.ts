@@ -17,6 +17,7 @@ function toPosition(id: string, data: Record<string, unknown>): Position {
     name: data.name as string,
     interviewTypes: (data.interviewTypes as InterviewType[]) ?? [],
     interviewersByRound: (data.interviewersByRound as Partial<Record<Round, string[]>>) ?? {},
+    slackChannelId: (data.slackChannelId as string | undefined) ?? undefined,
     createdAt: (data.createdAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
     updatedAt: (data.updatedAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
   }

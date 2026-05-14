@@ -10,6 +10,7 @@ import { Interview, InterviewStatus } from '@/domain/model/Interview'
 import { Interviewer } from '@/domain/model/Interviewer'
 import { useInterviews, useDeleteInterview, useRevertConfirmation } from '@/application/usecase/interview/useInterviews'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
+import { usePositions } from '@/application/usecase/position/usePositions'
 import InterviewCreateModal from './InterviewCreateModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
 import ScheduleRecommendModal from './ScheduleRecommendModal'
@@ -57,6 +58,7 @@ interface RecommendModalState {
 export default function SchedulingView() {
   const { data: interviews = [], isLoading } = useInterviews()
   const { data: interviewers = [] } = useInterviewers()
+  const { data: positionList = [] } = usePositions()
   const deleteInterview = useDeleteInterview()
   const revertConfirmation = useRevertConfirmation()
 
@@ -461,6 +463,7 @@ export default function SchedulingView() {
           onOpenChange={(o) => !o && setSlackModal(null)}
           interview={slackModal}
           interviewers={interviewers}
+          slackChannelId={positionList.find((p) => p.name === slackModal.positionName)?.slackChannelId}
         />
       )}
 

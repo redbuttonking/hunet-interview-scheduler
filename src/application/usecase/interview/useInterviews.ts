@@ -112,10 +112,10 @@ export function useSendSlack() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ slackIds, message }),
       })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        if (data.failed?.length) throw new Error(`일부 면접관에게 발송하지 못했습니다: ${data.failed.join(', ')}`)
-        throw new Error('슬랙 발송에 실패했습니다.')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.ok === false) {
+        if (data.failed?.length) throw new Error(`발송 실패 — 다음 대상에게 전달되지 않았습니다: ${data.failed.join(', ')}`)
+        throw new Error('슬랙 발송에 실패했습니다. 채널에 봇이 초대되어 있는지 확인해주세요.')
       }
       return interviewRepository.update(interviewId, { status: 'collecting' })
     },
