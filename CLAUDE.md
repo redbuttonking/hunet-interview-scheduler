@@ -17,10 +17,42 @@
 ## 빌드 & 실행
 
 ```bash
-npm run dev    # 개발 서버 (포트 3000)
-npm run build  # 프로덕션 빌드
-npm run lint   # 린트
+npm run dev        # 개발 서버 (포트 3000)
+npm run build      # 프로덕션 빌드
+npm run lint       # 린트
+npm run test       # 테스트 단발 실행
+npm run test:watch # 테스트 감시 모드 (개발 중 사용)
 ```
+
+## 배포 & CI/CD
+
+- **운영 URL**: https://hunet-interview-scheduler.vercel.app
+- **배포 플랫폼**: Vercel — `main` 브랜치에 푸시하면 자동 배포
+- **CI**: GitHub Actions (`.github/workflows/ci.yml`) — 푸시/PR 시 자동 실행
+
+### CI 실행 순서
+
+```
+git push → 린트 → 테스트 → 빌드 → (전부 통과 시) Vercel 자동 배포
+```
+
+### 패키지 설치 시 필수 규칙
+
+새 패키지를 설치하면 반드시 `package-lock.json`도 함께 커밋한다.  
+빠뜨리면 CI에서 `npm ci` 단계가 실패한다.
+
+```bash
+npm install 패키지명
+git add package.json package-lock.json
+git commit -m "Chore 패키지 추가"
+```
+
+### 환경변수 관리
+
+- 로컬: `.env.local` (gitignore 처리, 절대 커밋 금지)
+- Vercel: 대시보드 Settings → Environment Variables에서 관리
+- GitHub Actions: 저장소 Settings → Secrets and variables → Actions에서 관리
+- 새 환경변수 추가 시 세 곳 모두 등록해야 한다
 
 ## 아키텍처 (Hexagonal)
 
