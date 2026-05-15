@@ -2,22 +2,24 @@
 
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2, RotateCcw, FileText, Users, Zap, Clock } from 'lucide-react'
+import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2, RotateCcw, FileText, Users, Zap, Clock, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { Interview, InterviewStatus } from '@/domain/model/Interview'
 import { Interviewer } from '@/domain/model/Interviewer'
-import { useInterviews, useDeleteInterview, useRevertConfirmation } from '@/application/usecase/interview/useInterviews'
+import { useInterviews, useDeleteInterview, useRevertConfirmation, useSendCancellationSlack } from '@/application/usecase/interview/useInterviews'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
 import { usePositions } from '@/application/usecase/position/usePositions'
 import InterviewCreateModal from './InterviewCreateModal'
+import InterviewEditModal from './InterviewEditModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
 import ScheduleRecommendModal from './ScheduleRecommendModal'
 import CandidateOptionsModal from './CandidateOptionsModal'
 import CandidateChoiceModal from './CandidateChoiceModal'
 import SlackSendModal from './SlackSendModal'
 import SlackTemplateModal from './SlackTemplateModal'
+import CandidateNotifyModal from './CandidateNotifyModal'
 
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string }> = {
   pending_slack: { label: '슬랙 발송 전', className: 'bg-muted text-muted-foreground' },
@@ -61,6 +63,7 @@ export default function SchedulingView() {
   const { data: positionList = [] } = usePositions()
   const deleteInterview = useDeleteInterview()
   const revertConfirmation = useRevertConfirmation()
+  const sendCancellationSlack = useSendCancellationSlack()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
@@ -69,6 +72,8 @@ export default function SchedulingView() {
   const [choiceModal, setChoiceModal] = useState<Interview | null>(null)
   const [slackModal, setSlackModal] = useState<Interview | null>(null)
   const [templateOpen, setTemplateOpen] = useState(false)
+  const [editModal, setEditModal] = useState<Interview | null>(null)
+  const [notifyModal, setNotifyModal] = useState<Interview | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Interview | null>(null)
   const [revertTarget, setRevertTarget] = useState<Interview | null>(null)
 
@@ -117,6 +122,18 @@ export default function SchedulingView() {
   async function handleDelete() {
     if (!deleteTarget) return
     try {
+      // 슬랙 발송 이후 상태라면 면접관들에게 취소 DM 발송 (실패해도 삭제는 진행)
+      if (deleteTarget.status !== 'pending_slack') {
+        const slackIds = deleteTarget.interviewerIds
+          .map((id) => getInterviewer(id)?.slackId)
+          .filter((id): id is string => !!id)
+        if (slackIds.length > 0) {
+          const message = `[취소 안내] ${deleteTarget.candidateName}님(${deleteTarget.positionName}) 면접 가용 일정 조율이 취소되었습니다. 수고 많으셨습니다.`
+          await sendCancellationSlack.mutateAsync({ slackIds, message }).catch(() => {
+            toast.warning('취소 알림 슬랙 발송에 실패했습니다. 면접관에게 직접 알려주세요.')
+          })
+        }
+      }
       await deleteInterview.mutateAsync(deleteTarget)
       toast.success('삭제되었습니다.')
     } catch {
@@ -275,12 +292,22 @@ export default function SchedulingView() {
                       </span>
                     )}
                   </span>
-                  <button
-                    onClick={() => setDeleteTarget(interview)}
-                    className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {interview.status === 'pending_slack' && (
+                      <button
+                        onClick={() => setEditModal(interview)}
+                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setDeleteTarget(interview)}
+                      className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
                 {/* 후보자 정보 */}
                 <div className="flex items-center gap-2 flex-wrap">
@@ -437,13 +464,23 @@ export default function SchedulingView() {
                           </div>
                         )}
                       </div>
-                      <button
-                        onClick={() => setRevertTarget(interview)}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                      >
-                        <RotateCcw size={11} />
-                        확정 취소
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+                          onClick={() => setNotifyModal(interview)}
+                        >
+                          후보자 안내
+                        </Button>
+                        <button
+                          onClick={() => setRevertTarget(interview)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                        >
+                          <RotateCcw size={11} />
+                          확정 취소
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -456,6 +493,22 @@ export default function SchedulingView() {
       {/* 모달 */}
       <InterviewCreateModal open={createOpen} onOpenChange={setCreateOpen} />
       <SlackTemplateModal open={templateOpen} onOpenChange={setTemplateOpen} />
+
+      {editModal && (
+        <InterviewEditModal
+          open={!!editModal}
+          onOpenChange={(o) => !o && setEditModal(null)}
+          interview={editModal}
+        />
+      )}
+
+      {notifyModal && (
+        <CandidateNotifyModal
+          open={!!notifyModal}
+          onOpenChange={(o) => !o && setNotifyModal(null)}
+          interview={notifyModal}
+        />
+      )}
 
       {slackModal && (
         <SlackSendModal
@@ -536,6 +589,11 @@ export default function SchedulingView() {
             <DialogDescription>
               <span className="font-semibold text-foreground">{deleteTarget?.candidateName}</span>님의
               인터뷰 조율 건을 삭제하시겠습니까?
+              {deleteTarget && deleteTarget.status !== 'pending_slack' && (
+                <span className="block mt-2 text-xs text-amber-600">
+                  슬랙 발송 이후 단계이므로 면접관들에게 취소 안내 DM이 자동 발송됩니다.
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-2">

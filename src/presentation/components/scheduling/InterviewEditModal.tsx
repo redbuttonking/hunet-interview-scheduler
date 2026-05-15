@@ -1,7 +1,7 @@
 'use client'
 
-// 새 인터뷰 조율 건을 생성하는 모달 컴포넌트
-import { useState, useEffect } from 'react'
+// pending_slack 상태 인터뷰 정보를 수정하는 모달 컴포넌트
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -12,48 +12,72 @@ import { DatePickerField } from '@/components/ui/date-picker'
 import { X } from 'lucide-react'
 import { usePositions } from '@/application/usecase/position/usePositions'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
-import { useCreateInterview } from '@/application/usecase/interview/useInterviews'
+import { useUpdateInterview } from '@/application/usecase/interview/useInterviews'
+import { Interview } from '@/domain/model/Interview'
 import { Round } from '@/domain/model/Position'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
+  interview: Interview
 }
 
 type ErrorKeys = 'candidateName' | 'position' | 'type' | 'interviewers' | 'period'
 
-export default function InterviewCreateModal({ open, onOpenChange }: Props) {
+export default function InterviewEditModal({ open, onOpenChange, interview }: Props) {
   const { data: positions = [] } = usePositions()
   const { data: interviewers = [] } = useInterviewers()
-  const createInterview = useCreateInterview()
+  const updateInterview = useUpdateInterview()
 
-  const [candidateName, setCandidateName] = useState('')
-  const [positionId, setPositionId] = useState('')
+  const [candidateName, setCandidateName] = useState(interview.candidateName)
+  const [positionId, setPositionId] = useState(interview.positionId)
   const [selectedTypeIdx, setSelectedTypeIdx] = useState<number | null>(null)
-  const [interviewerIds, setInterviewerIds] = useState<string[]>([])
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [interviewerIds, setInterviewerIds] = useState<string[]>(interview.interviewerIds)
+  const [startDate, setStartDate] = useState(interview.availabilityPeriod?.startDate ?? '')
+  const [endDate, setEndDate] = useState(interview.availabilityPeriod?.endDate ?? '')
   const [errors, setErrors] = useState<Partial<Record<ErrorKeys, string>>>({})
+
+  // 초기 포지션·유형 참조 (포지션 변경 시 리셋 판단에 사용)
+  const initialPositionId = useRef(interview.positionId)
+  const initialTypeLabel = useRef(interview.typeLabel)
 
   const selectedPosition = positions.find((p) => p.id === positionId) ?? null
   const selectedType = selectedTypeIdx !== null ? selectedPosition?.interviewTypes[selectedTypeIdx] ?? null : null
 
+  // 포지션 데이터가 로드되면 최초 1회 유형 인덱스 복원
   useEffect(() => {
-    setSelectedTypeIdx(null)
-    setInterviewerIds([])
-    setErrors((p) => ({ ...p, position: undefined, type: undefined, interviewers: undefined }))
-  }, [positionId])
-
-  useEffect(() => {
-    if (!selectedType || !selectedPosition) return
-    const allRounds = [...new Set(selectedType.sessions.flatMap((s) => s.rounds))] as Round[]
-    const ids = [...new Set(allRounds.flatMap((r) => selectedPosition.interviewersByRound[r] ?? []))]
-    setInterviewerIds(ids)
-    setErrors((p) => ({ ...p, type: undefined, interviewers: undefined }))
-  }, [selectedTypeIdx, selectedPosition, selectedType])
+    if (!positions.length || selectedTypeIdx !== null) return
+    const pos = positions.find((p) => p.id === initialPositionId.current)
+    if (!pos) return
+    const idx = pos.interviewTypes.findIndex((t) => t.label === initialTypeLabel.current)
+    if (idx !== -1) setSelectedTypeIdx(idx)
+  }, [positions, selectedTypeIdx])
 
   function clearError(key: ErrorKeys) {
     setErrors((p) => ({ ...p, [key]: undefined }))
+  }
+
+  function handlePositionChange(v: string | null) {
+    if (!v) return
+    setPositionId(v)
+    // 포지션이 바뀌면 유형·면접관 리셋
+    setSelectedTypeIdx(null)
+    setInterviewerIds([])
+    clearError('position')
+    clearError('type')
+    clearError('interviewers')
+  }
+
+  // 유형 선택 시 포지션 기본 면접관 자동 세팅
+  function handleTypeSelect(idx: number) {
+    setSelectedTypeIdx(idx)
+    clearError('type')
+    if (!selectedPosition) return
+    const type = selectedPosition.interviewTypes[idx]
+    const allRounds = [...new Set(type.sessions.flatMap((s) => s.rounds))] as Round[]
+    const ids = [...new Set(allRounds.flatMap((r) => selectedPosition.interviewersByRound[r] ?? []))]
+    setInterviewerIds(ids)
+    clearError('interviewers')
   }
 
   function toggleInterviewer(id: string) {
@@ -61,16 +85,6 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     )
     clearError('interviewers')
-  }
-
-  function reset() {
-    setCandidateName('')
-    setPositionId('')
-    setSelectedTypeIdx(null)
-    setInterviewerIds([])
-    setStartDate('')
-    setEndDate('')
-    setErrors({})
   }
 
   async function handleSubmit() {
@@ -89,29 +103,31 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
 
     setErrors({})
     try {
-      await createInterview.mutateAsync({
-        candidateName: candidateName.trim(),
-        positionId,
-        positionName: selectedPosition!.name,
-        typeLabel: selectedType!.label,
-        sessions: selectedType!.sessions,
-        interviewerIds,
-        interviewersByRound: selectedPosition!.interviewersByRound,
-        availabilityPeriod: { startDate, endDate },
+      await updateInterview.mutateAsync({
+        id: interview.id,
+        input: {
+          candidateName: candidateName.trim(),
+          positionId,
+          positionName: selectedPosition!.name,
+          typeLabel: selectedType!.label,
+          sessions: selectedType!.sessions,
+          interviewerIds,
+          interviewersByRound: selectedPosition!.interviewersByRound,
+          availabilityPeriod: { startDate, endDate },
+        },
       })
-      toast.success('인터뷰 조율 건이 생성되었습니다.')
-      reset()
+      toast.success('인터뷰 정보가 수정되었습니다.')
       onOpenChange(false)
     } catch {
-      toast.error('생성 중 오류가 발생했습니다.')
+      toast.error('수정 중 오류가 발생했습니다.')
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o) }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>새 인터뷰 만들기</DialogTitle>
+          <DialogTitle>인터뷰 수정</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
@@ -130,7 +146,7 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
           {/* 포지션 */}
           <div className="space-y-1.5">
             <Label>포지션</Label>
-            <Select value={positionId} onValueChange={(v) => { if (v) { setPositionId(v); clearError('position') } }}>
+            <Select value={positionId} onValueChange={handlePositionChange}>
               <SelectTrigger className={`w-full ${errors.position ? 'border-destructive' : ''}`}>
                 <SelectValue placeholder="포지션 선택">
                   {positions.find((p) => p.id === positionId)?.name}
@@ -154,7 +170,7 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => { setSelectedTypeIdx(idx); clearError('type') }}
+                    onClick={() => handleTypeSelect(idx)}
                     className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
                       selectedTypeIdx === idx
                         ? 'bg-primary text-primary-foreground border-primary'
@@ -222,9 +238,9 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={() => { reset(); onOpenChange(false) }}>취소</Button>
-          <Button onClick={handleSubmit} disabled={createInterview.isPending}>
-            {createInterview.isPending ? '생성 중...' : '생성'}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>취소</Button>
+          <Button onClick={handleSubmit} disabled={updateInterview.isPending}>
+            {updateInterview.isPending ? '수정 중...' : '수정'}
           </Button>
         </div>
       </DialogContent>

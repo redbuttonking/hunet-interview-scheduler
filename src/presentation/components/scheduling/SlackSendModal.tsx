@@ -253,6 +253,8 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
                 setSelectedDate(val)
                 setExcludedDates(new Set())
               }}
+              min={interview.availabilityPeriod?.startDate}
+              max={interview.availabilityPeriod?.endDate}
               placeholder="날짜를 선택하면 해당 주 월~목이 표시됩니다"
             />
             {weekDates.length > 0 && (

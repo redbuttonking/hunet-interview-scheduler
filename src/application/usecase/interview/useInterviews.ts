@@ -104,6 +104,28 @@ export function useSubmitAvailability() {
   })
 }
 
+/** 면접 취소 시 면접관들에게 단순 텍스트 DM 발송 (인터뷰 상태 변경 없음) */
+export function useSendCancellationSlack() {
+  return useMutation({
+    mutationFn: async ({
+      slackIds,
+      message,
+    }: {
+      slackIds: string[]
+      message: string
+    }) => {
+      if (!auth.currentUser) throw new Error('로그인이 필요합니다.')
+      const token = await getIdToken(auth.currentUser)
+      const res = await fetch('/api/slack/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ slackIds, message }),
+      })
+      if (!res.ok) throw new Error('슬랙 발송 실패')
+    },
+  })
+}
+
 export function useSendSlack() {
   const qc = useQueryClient()
   return useMutation({

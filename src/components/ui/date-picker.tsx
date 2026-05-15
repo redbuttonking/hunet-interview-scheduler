@@ -53,6 +53,7 @@ export function DatePickerField({ value, onChange, min, max, className, placehol
 
   function isDisabled(day: Date): boolean {
     if (isWeekend(day)) return true
+    if (getDay(day) === 5) return true // 금요일 — 주 4일제(월~목)
     if (min && isBefore(startOfDay(day), startOfDay(parseISO(min)))) return true
     if (max && isAfter(startOfDay(day), startOfDay(parseISO(max)))) return true
     return false
@@ -149,7 +150,7 @@ export function DatePickerField({ value, onChange, min, max, className, placehol
         </div>
 
         <p className="mt-3 text-xs text-muted-foreground text-center">
-          토·일요일은 선택할 수 없습니다
+          금·토·일요일은 선택할 수 없습니다
         </p>
       </PopoverContent>
     </Popover>

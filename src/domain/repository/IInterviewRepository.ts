@@ -13,9 +13,15 @@ export interface CreateInterviewInput {
 }
 
 export interface UpdateInterviewInput {
+  candidateName?: string
+  positionId?: string
+  positionName?: string
+  typeLabel?: string
+  sessions?: { rounds: Round[] }[]
   status?: InterviewStatus
   interviewerIds?: string[]
   interviewersByRound?: Partial<Record<Round, string[]>>
+  availabilityPeriod?: { startDate: string; endDate: string } | null
   availabilities?: InterviewerAvailability[]
   confirmedSlot?: Interview['confirmedSlot']
   candidateOptions?: CandidateOption[] | null
