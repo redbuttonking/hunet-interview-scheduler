@@ -7,4 +7,5 @@ export const COLLECTIONS = {
   ROOM_RESERVATIONS: 'roomReservations',
   SETTINGS: 'settings',
   USERS: 'users',
+  NOTIFICATION_RECIPIENTS: 'notificationRecipients',
 } as const

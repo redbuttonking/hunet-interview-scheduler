@@ -4,6 +4,7 @@ import { WebClient } from '@slack/web-api'
 import { adminDb } from '@/infrastructure/firebase/adminConfig'
 import { COLLECTIONS } from '@/infrastructure/firebase/collections'
 import { FieldValue } from 'firebase-admin/firestore'
+import type { Firestore, DocumentData } from 'firebase-admin/firestore'
 
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN)
 
@@ -276,6 +277,32 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
     status: allSubmitted ? 'ready_to_schedule' : 'collecting',
     updatedAt: FieldValue.serverTimestamp(),
   })
+
+  if (allSubmitted) {
+    await notifyRecruiters(db, interviewData)
+  }
+}
+
+// 전원 제출 완료 시 채용 담당자들에게 슬랙 DM 발송
+async function notifyRecruiters(
+  db: Firestore,
+  interviewData: DocumentData,
+) {
+  const recipientsSnap = await db.collection(COLLECTIONS.NOTIFICATION_RECIPIENTS).get()
+  if (recipientsSnap.empty) return
+
+  const candidateName = interviewData.candidateName as string
+  const positionName = interviewData.positionName as string
+  const message = `✅ *${candidateName}* (${positionName}) 면접관 전원이 가용 일정을 제출했습니다.\n일정 조율 페이지에서 확인해주세요.`
+
+  await Promise.allSettled(
+    recipientsSnap.docs.map((doc) =>
+      slack.chat.postMessage({
+        channel: doc.data().slackId as string,
+        text: message,
+      }),
+    ),
+  )
 }
 
 export async function POST(req: NextRequest) {
