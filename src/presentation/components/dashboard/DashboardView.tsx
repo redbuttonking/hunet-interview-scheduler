@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { format, startOfWeek, endOfWeek, addWeeks } from 'date-fns'
-import { CalendarCheck, ClipboardList, ArrowRight, CheckCircle2, Circle } from 'lucide-react'
+import { CalendarCheck, ClipboardList, ArrowRight, CheckCircle2, Circle, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Interview, InterviewStatus } from '@/domain/model/Interview'
 import { useInterviews } from '@/application/usecase/interview/useInterviews'
@@ -125,7 +125,7 @@ export default function DashboardView() {
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard
-          label="예정된 인터뷰"
+          label="확정된 인터뷰"
           value={isLoading ? '—' : String(allUpcomingConfirmed.length)}
           icon={CalendarCheck}
           color="text-primary bg-primary/10"
@@ -138,10 +138,10 @@ export default function DashboardView() {
         />
       </div>
 
-      {/* 예정된 인터뷰 */}
+      {/* 확정된 인터뷰 */}
       <section>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="text-lg font-bold text-foreground">예정된 인터뷰</h2>
+          <h2 className="text-lg font-bold text-foreground">확정된 인터뷰</h2>
           <div className="flex items-center gap-1">
             {WEEK_FILTERS.map((f) => (
               <button
@@ -165,8 +165,8 @@ export default function DashboardView() {
             <EmptyRow
               text={
                 weekFilter === 'all'
-                  ? '예정된 인터뷰가 없습니다.'
-                  : `${weekFilter === 'this_week' ? '이번 주' : '다음 주'}에 예정된 인터뷰가 없습니다.`
+                  ? '확정된 인터뷰가 없습니다.'
+                  : `${weekFilter === 'this_week' ? '이번 주' : '다음 주'}에 확정된 인터뷰가 없습니다.`
               }
             />
           )}
@@ -174,7 +174,7 @@ export default function DashboardView() {
             <div className="divide-y divide-border">
               {filteredUpcoming.map((iv) => (
                 <div key={iv.id} className="flex items-center gap-3 px-4 sm:px-5 py-3.5 sm:py-4">
-                  <div className="w-16 text-sm font-semibold text-primary shrink-0">
+                  <div className="w-16 text-base font-bold text-foreground shrink-0">
                     {formatDateKo(iv.confirmedSlot!.date)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -184,12 +184,15 @@ export default function DashboardView() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm text-foreground">
+                    <p className="text-sm font-semibold text-foreground">
                       {iv.confirmedSlot!.startTime} ~ {iv.confirmedSlot!.endTime}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {[...new Set(iv.confirmedSlot!.slots.map((s) => s.roomName))].join(' / ')}
-                    </p>
+                    <div className="flex items-center justify-end gap-1 mt-0.5">
+                      <MapPin size={11} className="text-muted-foreground shrink-0" />
+                      <span className="text-xs text-muted-foreground">
+                        {[...new Set(iv.confirmedSlot!.slots.map((s) => s.roomName))].join(' / ')}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -258,10 +261,10 @@ function StatCard({
   return (
     <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
       <div className="flex items-center gap-2 mb-3">
-        <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0', color)}>
-          <Icon size={14} />
+        <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', color)}>
+          <Icon size={18} />
         </div>
-        <p className="text-sm font-bold text-foreground">{label}</p>
+        <p className="text-base font-bold text-foreground">{label}</p>
       </div>
       <p className="text-3xl font-bold text-foreground">{value}</p>
     </div>
@@ -314,5 +317,5 @@ function LoadingRow() {
 }
 
 function EmptyRow({ text }: { text: string }) {
-  return <div className="py-8 text-center text-xs text-muted-foreground">{text}</div>
+  return <div className="py-10 text-center text-sm font-medium text-muted-foreground">{text}</div>
 }

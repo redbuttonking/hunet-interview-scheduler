@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
-import { CalendarCheck, Clock, CheckCircle2 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { XCircle, Clock, CheckCircle2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Interview } from '@/domain/model/Interview'
@@ -67,9 +67,18 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>일정 추천</DialogTitle>
-          <DialogDescription>
-            {interview.candidateName} · {interview.positionName} · {interview.typeLabel}
-          </DialogDescription>
+          {/* 후보자 정보 칩 배지 */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-foreground text-background">
+              {interview.candidateName}
+            </span>
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
+              {interview.positionName}
+            </span>
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
+              {interview.typeLabel}
+            </span>
+          </div>
         </DialogHeader>
 
         <div className="pt-2">
@@ -82,8 +91,8 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
 
           {!isLoading && schedules.length === 0 && (
             <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground text-center">
-              <CalendarCheck size={28} className="opacity-40" />
-              <p className="text-sm font-medium text-foreground">추천 가능한 슬롯이 없습니다</p>
+              <XCircle size={28} className="opacity-40" />
+              <p className="text-sm font-medium text-foreground">인터뷰 진행 가능한 회의실이 없습니다</p>
               <p className="text-xs">캘린더에 회의실 예약을 먼저 등록하거나, 면접관 가용 일정을 다시 확인해주세요.</p>
             </div>
           )}
@@ -122,15 +131,15 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
                       className={cn(
                         'w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-all',
                         selected
-                          ? 'border-primary bg-primary/10 shadow-sm'
+                          ? 'border-primary bg-primary shadow-sm'
                           : 'border-border hover:border-primary/40 hover:bg-muted/30',
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <span className={cn('font-semibold', selected ? 'text-primary' : 'text-foreground')}>
+                        <span className={cn('font-semibold', selected ? 'text-primary-foreground' : 'text-foreground')}>
                           {formatDate(schedule.date)}
                         </span>
-                        {selected && <CheckCircle2 size={16} className="text-primary shrink-0" />}
+                        {selected && <CheckCircle2 size={16} className="text-primary-foreground shrink-0" />}
                       </div>
 
                       <div className="flex flex-col gap-0.5 mt-1">
@@ -138,16 +147,18 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
                           const sessionRounds = interview.sessions[si]?.rounds ?? []
                           return (
                             <div key={si} className="flex items-center gap-1.5">
-                              <Clock size={12} className="text-muted-foreground shrink-0" />
+                              <Clock size={12} className={cn('shrink-0', selected ? 'text-primary-foreground/70' : 'text-muted-foreground')} />
                               {!isSingleSession && (
-                                <span className={cn('font-semibold text-xs shrink-0', sessionRounds.length > 0 ? (ROUND_COLORS[sessionRounds[0] as Round] ?? 'text-muted-foreground') : 'text-muted-foreground')}>
+                                <span className={cn('font-semibold text-xs shrink-0', selected ? 'text-primary-foreground' : sessionRounds.length > 0 ? (ROUND_COLORS[sessionRounds[0] as Round] ?? 'text-muted-foreground') : 'text-muted-foreground')}>
                                   {sessionLabel(sessionRounds as Round[])}
                                 </span>
                               )}
-                              <span className={selected ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                              <span className={cn('text-sm', selected ? 'text-primary-foreground font-medium' : 'text-muted-foreground')}>
                                 {slot.startTime} ~ {slot.endTime}
                               </span>
-                              <span className="text-muted-foreground text-xs">· {slot.roomName}</span>
+                              <span className={cn('text-sm font-medium', selected ? 'text-primary-foreground/80' : 'text-foreground/70')}>
+                                · {slot.roomName}
+                              </span>
                             </div>
                           )
                         })}
