@@ -3,7 +3,7 @@
 // 관리자 전용 사용자 계정 관리 페이지
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { UserPlus, Trash2 } from 'lucide-react'
+import { UserPlus, Trash2, Users } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { useUsers, useCreateUser, useDeleteUser, useUpdateUserRole } from '@/application/usecase/user/useUsers'
@@ -64,80 +64,89 @@ export default function UserManagementPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold">계정 관리</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">채용 담당자 및 관리자 계정을 관리합니다.</p>
+    <div className="max-w-5xl mx-auto">
+      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+              <Users size={15} className="text-primary" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-foreground">계정 관리</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">채용 담당자 및 관리자 계정을 관리합니다.</p>
+            </div>
+          </div>
+          <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 shrink-0">
+            <UserPlus size={14} />
+            계정 추가
+          </Button>
         </div>
-        <Button onClick={() => setAddOpen(true)} className="gap-1.5">
-          <UserPlus size={15} />
-          계정 추가
-        </Button>
-      </div>
 
-      <div className="rounded-xl border border-border bg-background overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">불러오는 중...</div>
+          <p className="text-sm text-muted-foreground">불러오는 중...</p>
         ) : users.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">등록된 계정이 없습니다.</div>
+          <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center">
+            <p className="text-sm text-muted-foreground">등록된 계정이 없습니다.</p>
+          </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">이름</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">이메일</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">역할</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">등록일</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u, i) => (
-                <tr
-                  key={u.id}
-                  className={i < users.length - 1 ? 'border-b border-border' : ''}
-                >
-                  <td className="px-4 py-3 font-medium">
-                    {u.name}
-                    {u.id === me?.uid && (
-                      <span className="ml-2 text-xs text-muted-foreground">(나)</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
-                  <td className="px-4 py-3">
-                    <Select
-                      value={u.role}
-                      onValueChange={(val) => handleRoleChange(u.id, val as UserRole)}
-                      disabled={u.id === me?.uid}
-                    >
-                      <SelectTrigger className="h-8 w-28 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="recruiter">채용담당자</SelectItem>
-                        <SelectItem value="admin">관리자</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {format(u.createdAt, 'yyyy.MM.dd', { locale: ko })}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                      disabled={u.id === me?.uid}
-                      onClick={() => setDeleteTarget({ id: u.id, name: u.name })}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </td>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">이름</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">이메일</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">역할</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">등록일</th>
+                  <th className="px-4 py-2.5" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {users.map((u, i) => (
+                  <tr
+                    key={u.id}
+                    className={i < users.length - 1 ? 'border-b border-border' : ''}
+                  >
+                    <td className="px-4 py-3 font-medium">
+                      {u.name}
+                      {u.id === me?.uid && (
+                        <span className="ml-2 text-xs text-muted-foreground">(나)</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+                    <td className="px-4 py-3">
+                      <Select
+                        value={u.role}
+                        onValueChange={(val) => handleRoleChange(u.id, val as UserRole)}
+                        disabled={u.id === me?.uid}
+                      >
+                        <SelectTrigger className="h-8 w-28 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="recruiter">채용담당자</SelectItem>
+                          <SelectItem value="admin">관리자</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {format(u.createdAt, 'yyyy.MM.dd', { locale: ko })}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        disabled={u.id === me?.uid}
+                        onClick={() => setDeleteTarget({ id: u.id, name: u.name })}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
