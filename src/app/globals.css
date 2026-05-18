@@ -52,32 +52,32 @@
   /* 메인 배경: 흰색 */
   --background: oklch(1 0 0);
   --foreground: oklch(0.16 0.01 260);
-  --card: oklch(0.97 0.006 75);
+  --card: oklch(1 0 0);
   --card-foreground: oklch(0.16 0.01 260);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.16 0.01 260);
   /* 다크 네이비 — 활성 사이드바, 버튼 */
   --primary: oklch(0.26 0.08 258);
   --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.94 0.010 75);
+  --secondary: oklch(0.93 0.014 75);
   --secondary-foreground: oklch(0.26 0.08 258);
-  --muted: oklch(0.94 0.010 75);
+  --muted: oklch(0.93 0.014 75);
   --muted-foreground: oklch(0.52 0.02 260);
-  --accent: oklch(0.94 0.010 75);
+  --accent: oklch(0.93 0.014 75);
   --accent-foreground: oklch(0.26 0.08 258);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.91 0.010 75);
-  --input: oklch(0.91 0.010 75);
+  --border: oklch(0.89 0.014 75);
+  --input: oklch(0.89 0.014 75);
   --ring: oklch(0.52 0.06 258);
   --radius: 0.6rem;
-  /* 사이드바: 흰 배경 대비 살짝 구분되는 톤 */
-  --sidebar: oklch(0.96 0.012 75);
+  /* 사이드바: 흰색 */
+  --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.16 0.01 260);
   --sidebar-primary: oklch(0.26 0.08 258);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.92 0.012 75);
+  --sidebar-accent: oklch(0.90 0.016 75);
   --sidebar-accent-foreground: oklch(0.26 0.08 258);
-  --sidebar-border: oklch(0.89 0.010 75);
+  --sidebar-border: oklch(0.87 0.014 75);
   --sidebar-ring: oklch(0.52 0.06 258);
 }
 
