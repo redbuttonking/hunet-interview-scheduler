@@ -58,9 +58,9 @@
   --card-foreground: oklch(0.145 0.025 258);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0.025 258);
-  /* 휴넷 다크 차콜 — 버튼, 활성 상태 */
-  --primary: oklch(0.145 0.025 258);
-  --primary-foreground: oklch(0.985 0 0);
+  /* 휴넷 레드 #FF0019 — Primary 버튼, 강조 액션 */
+  --primary: oklch(0.533 0.255 25);
+  --primary-foreground: oklch(1 0 0);
   /* zinc-100 */
   --secondary: oklch(0.963 0.002 260);
   --secondary-foreground: oklch(0.145 0.025 258);
@@ -69,8 +69,8 @@
   --muted-foreground: oklch(0.52 0.008 260);
   --accent: oklch(0.963 0.002 260);
   --accent-foreground: oklch(0.145 0.025 258);
-  /* 휴넷 레드 #FF0019 — 삭제 등 위험 액션에만 사용 */
-  --destructive: oklch(0.533 0.255 25);
+  /* 삭제 등 위험 액션 — 레드 계열 유지, 약간 어둡게 */
+  --destructive: oklch(0.48 0.22 25);
   /* zinc-200 */
   --border: oklch(0.914 0.003 260);
   --input: oklch(0.914 0.003 260);
@@ -79,6 +79,7 @@
   /* 사이드바: zinc-50 — 본문과 미세한 구분 */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0.025 258);
+  /* 사이드바 활성 메뉴: 차콜 유지 — 레드보다 절제된 내비게이션 */
   --sidebar-primary: oklch(0.145 0.025 258);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.963 0.002 260);
@@ -132,6 +133,7 @@
     @apply font-sans;
   }
 }
+
 
 /* 캘린더 가로 스크롤 — 얇고 부드러운 스크롤바 */
 .calendar-scroll {
