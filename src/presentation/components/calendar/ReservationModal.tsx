@@ -14,8 +14,8 @@ import { Room } from '@/domain/model/Room'
 
 const STATUS_OPTIONS: { value: ReservationStatus; label: string; color: string }[] = [
   { value: 'reserved', label: '예약됨', color: 'bg-amber-100 text-amber-700 border-amber-300' },
-  { value: 'coordinating', label: '조율중', color: 'bg-blue-100 text-blue-700 border-blue-300' },
-  { value: 'confirmed', label: '확정', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+  { value: 'coordinating', label: '조율중', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+  { value: 'confirmed', label: '확정', color: 'bg-blue-100 text-blue-700 border-blue-300' },
 ]
 
 function minsToTime(mins: number): string {
