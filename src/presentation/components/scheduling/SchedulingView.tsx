@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { getIdToken } from 'firebase/auth'
 import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2, RotateCcw, FileText, Users, Zap, Clock, Pencil } from 'lucide-react'
+import { auth } from '@/infrastructure/firebase/config'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
@@ -72,6 +74,8 @@ export default function SchedulingView() {
   const [choiceModal, setChoiceModal] = useState<Interview | null>(null)
   const [slackModal, setSlackModal] = useState<Interview | null>(null)
   const [resendDmIds, setResendDmIds] = useState<string[] | null>(null)
+  const [resendConfirm, setResendConfirm] = useState<{ interview: Interview; interviewerId: string } | null>(null)
+  const [isResending, setIsResending] = useState(false)
   const [templateOpen, setTemplateOpen] = useState(false)
   const [editModal, setEditModal] = useState<Interview | null>(null)
   const [notifyModal, setNotifyModal] = useState<Interview | null>(null)
@@ -118,6 +122,31 @@ export default function SchedulingView() {
 
   function getInterviewer(id: string) {
     return interviewers.find((iv) => iv.id === id)
+  }
+
+  async function handleResend() {
+    if (!resendConfirm) return
+    setIsResending(true)
+    try {
+      if (!auth.currentUser) throw new Error('로그인이 필요합니다.')
+      const token = await getIdToken(auth.currentUser)
+      const res = await fetch('/api/slack/remind-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          interviewId: resendConfirm.interview.id,
+          interviewerId: resendConfirm.interviewerId,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error ?? '발송 실패')
+      toast.success('리마인드 메시지를 채널에 발송했습니다.')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '발송 중 오류가 발생했습니다.')
+    } finally {
+      setIsResending(false)
+      setResendConfirm(null)
+    }
   }
 
   async function handleDelete() {
@@ -364,10 +393,7 @@ export default function SchedulingView() {
                           {!submitted && iv && (
                             <div className="flex items-center gap-3">
                               <button
-                                onClick={() => {
-                                  setSlackModal(interview)
-                                  setResendDmIds([iv.id])
-                                }}
+                                onClick={() => setResendConfirm({ interview, interviewerId: iv.id })}
                                 className="text-xs text-muted-foreground hover:text-primary transition-colors"
                               >
                                 재발송
@@ -565,6 +591,29 @@ export default function SchedulingView() {
           interview={choiceModal}
         />
       )}
+
+      {/* 재발송 확인 */}
+      <Dialog open={resendConfirm !== null} onOpenChange={(o) => !o && setResendConfirm(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>리마인드 메시지 재발송</DialogTitle>
+            <DialogDescription>
+              <span className="font-semibold text-foreground">
+                {getInterviewer(resendConfirm?.interviewerId ?? '')?.name}
+              </span>
+              님에게 채널에서 리마인드 메시지를 발송하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setResendConfirm(null)} disabled={isResending}>
+              취소
+            </Button>
+            <Button onClick={handleResend} disabled={isResending}>
+              {isResending ? '발송 중...' : '발송'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 확정 취소 확인 */}
       <Dialog open={revertTarget !== null} onOpenChange={(o) => !o && setRevertTarget(null)}>

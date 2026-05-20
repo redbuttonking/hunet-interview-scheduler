@@ -7,6 +7,9 @@ import { FieldValue } from 'firebase-admin/firestore'
 
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN)
 
+const DEFAULT_REMINDER_MESSAGE =
+  '{후보자명} ({포지션명}) 인터뷰 일정을 선택해 주시면 감사 드리겠습니다~'
+
 /** KST 기준 오늘 날짜를 YYYY-MM-DD로 반환 */
 function todayKST(): string {
   const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
@@ -23,6 +26,10 @@ export async function GET(req: NextRequest) {
 
   const today = todayKST()
   const db = adminDb()
+
+  // 리마인드 템플릿 조회
+  const templateSnap = await db.collection(COLLECTIONS.SETTINGS).doc('reminder-template').get()
+  const rawMessage = (templateSnap.data()?.message as string | undefined) ?? DEFAULT_REMINDER_MESSAGE
 
   // 오늘이 리마인드 예정일이고 아직 발송하지 않은 collecting 인터뷰 조회
   const interviewsSnap = await db
@@ -67,10 +74,14 @@ export async function GET(req: NextRequest) {
       .join(' ')
     if (!mentions) continue
 
+    const message = rawMessage
+      .replace('{후보자명}', interview.candidateName as string)
+      .replace('{포지션명}', interview.positionName as string)
+
     try {
       await slack.chat.postMessage({
         channel: slackChannelId,
-        text: `${mentions} *${interview.candidateName as string}* (${interview.positionName as string}) 인터뷰 가용 일정을 아직 입력하지 않으셨습니다. 슬랙 DM을 확인해 주세요.`,
+        text: `${mentions}\n${message}`,
       })
       await doc.ref.update({ reminderSentAt: FieldValue.serverTimestamp() })
       reminded++

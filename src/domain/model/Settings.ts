@@ -4,3 +4,9 @@ export interface SlackTemplate {
   footer: string
   updatedAt: Date
 }
+
+/** 리마인드 메시지 템플릿 설정 */
+export interface ReminderTemplate {
+  message: string
+  updatedAt: Date
+}
