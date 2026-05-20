@@ -71,6 +71,7 @@ export default function SchedulingView() {
   const [proposeModal, setProposeModal] = useState<Interview | null>(null)
   const [choiceModal, setChoiceModal] = useState<Interview | null>(null)
   const [slackModal, setSlackModal] = useState<Interview | null>(null)
+  const [resendDmIds, setResendDmIds] = useState<string[] | null>(null)
   const [templateOpen, setTemplateOpen] = useState(false)
   const [editModal, setEditModal] = useState<Interview | null>(null)
   const [notifyModal, setNotifyModal] = useState<Interview | null>(null)
@@ -284,7 +285,7 @@ export default function SchedulingView() {
               <div key={interview.id} className="bg-card rounded-xl border border-border shadow-sm p-5">
                 {/* 카드 헤더: 배지 + 삭제 */}
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap', cfg.className)}>
+                  <span className={cn('text-sm font-semibold px-3 py-1.5 rounded-full whitespace-nowrap', cfg.className)}>
                     {cfg.label}
                     {(interview.status === 'collecting' || interview.status === 'ready_to_schedule') && (
                       <span className="ml-1 opacity-70">
@@ -361,12 +362,23 @@ export default function SchedulingView() {
                             </span>
                           </div>
                           {!submitted && iv && (
-                            <button
-                              onClick={() => setAvailModal({ interview, interviewer: iv })}
-                              className="text-xs text-primary hover:underline"
-                            >
-                              일정 입력
-                            </button>
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => {
+                                  setSlackModal(interview)
+                                  setResendDmIds([iv.id])
+                                }}
+                                className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                재발송
+                              </button>
+                              <button
+                                onClick={() => setAvailModal({ interview, interviewer: iv })}
+                                className="text-xs text-primary hover:underline"
+                              >
+                                일정 입력
+                              </button>
+                            </div>
                           )}
                           {submitted && iv && (
                             <button
@@ -513,10 +525,11 @@ export default function SchedulingView() {
       {slackModal && (
         <SlackSendModal
           open={!!slackModal}
-          onOpenChange={(o) => !o && setSlackModal(null)}
+          onOpenChange={(o) => { if (!o) { setSlackModal(null); setResendDmIds(null) } }}
           interview={slackModal}
           interviewers={interviewers}
           slackChannelId={positionList.find((p) => p.name === slackModal.positionName)?.slackChannelId}
+          initialDmIds={resendDmIds ?? undefined}
         />
       )}
 

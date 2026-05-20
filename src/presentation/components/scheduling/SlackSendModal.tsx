@@ -49,9 +49,11 @@ interface Props {
   interview: Interview
   interviewers: Interviewer[]
   slackChannelId?: string
+  /** 지정 시 해당 면접관만 DM 대상으로 미리 선택됨 */
+  initialDmIds?: string[]
 }
 
-export default function SlackSendModal({ open, onOpenChange, interview, interviewers, slackChannelId }: Props) {
+export default function SlackSendModal({ open, onOpenChange, interview, interviewers, slackChannelId, initialDmIds }: Props) {
   const sendSlack = useSendSlack()
   const { data: template } = useSlackTemplate()
 
@@ -73,9 +75,9 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
       setFooter(template.footer)
       setSelectedDate('')
       setExcludedDates(new Set())
-      // 채널 ID가 있으면 채널 모드로 기본값 설정, 없으면 DM
-      setSendMode(slackChannelId ? 'channel' : 'dm')
-      setSelectedDmIds(new Set(relevantInterviewers.map((iv) => iv.id)))
+      // initialDmIds가 있으면 DM 모드로 고정, 없으면 채널 여부로 결정
+      setSendMode(initialDmIds ? 'dm' : slackChannelId ? 'channel' : 'dm')
+      setSelectedDmIds(new Set(initialDmIds ?? relevantInterviewers.map((iv) => iv.id)))
     }
   }, [open, template, slackChannelId, relevantInterviewers])
 
