@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Interviewer } from '@/domain/model/Interviewer'
-import { useCreateInterviewer, useUpdateInterviewer } from '@/application/usecase/interviewer/useInterviewers'
+import { useInterviewers, useCreateInterviewer, useUpdateInterviewer } from '@/application/usecase/interviewer/useInterviewers'
 
 interface Props {
   open: boolean
@@ -21,6 +21,7 @@ export default function InterviewerModal({ open, onOpenChange, interviewer }: Pr
   const [name, setName] = useState('')
   const [slackId, setSlackId] = useState('')
 
+  const { data: interviewers = [] } = useInterviewers()
   const create = useCreateInterviewer()
   const update = useUpdateInterviewer()
   const isPending = create.isPending || update.isPending
@@ -39,6 +40,14 @@ export default function InterviewerModal({ open, onOpenChange, interviewer }: Pr
     const trimmedSlack = slackId.trim()
 
     if (!trimmedName || !trimmedSlack) return
+
+    const isDuplicate = interviewers.some(
+      (iv) => iv.slackId === trimmedSlack && iv.id !== interviewer?.id,
+    )
+    if (isDuplicate) {
+      toast.error('이미 등록된 슬랙 멤버 ID입니다.')
+      return
+    }
 
     try {
       if (isEdit) {
