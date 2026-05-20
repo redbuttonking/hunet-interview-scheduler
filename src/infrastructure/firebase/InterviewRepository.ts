@@ -27,6 +27,8 @@ function toInterview(id: string, data: Record<string, unknown>): Interview {
     availabilities: (data.availabilities as InterviewerAvailability[]) ?? [],
     candidateOptions: (data.candidateOptions as CandidateOption[] | null) ?? null,
     confirmedSlot: (data.confirmedSlot as Interview['confirmedSlot']) ?? null,
+    reminderScheduledFor: (data.reminderScheduledFor as string | undefined) ?? undefined,
+    reminderSentAt: (data.reminderSentAt as { toDate(): Date } | null)?.toDate() ?? undefined,
     createdAt: (data.createdAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
     updatedAt: (data.updatedAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
   }

@@ -55,6 +55,10 @@ export interface Interview {
     endTime: string
     slots: { startTime: string; endTime: string; roomId: string; roomName: string }[]
   } | null
+  /** 슬랙 발송 다음 평일(월~목) — 리마인드 발송 예정일 (YYYY-MM-DD) */
+  reminderScheduledFor?: string
+  /** 리마인드 발송 완료 시각 */
+  reminderSentAt?: Date
   createdAt: Date
   updatedAt: Date
 }

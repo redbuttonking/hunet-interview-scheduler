@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getIdToken } from 'firebase/auth'
+import Holidays from 'date-holidays'
 import { auth } from '@/infrastructure/firebase/config'
 import { interviewRepository } from '@/infrastructure/firebase/InterviewRepository'
 import { roomReservationRepository } from '@/infrastructure/firebase/RoomReservationRepository'
@@ -9,6 +10,23 @@ import { UpdateReservationInput, ProposeOptionInput } from '@/domain/repository/
 import { Interview, InterviewerAvailability, CandidateOption } from '@/domain/model/Interview'
 import { RoomReservation } from '@/domain/model/Room'
 import { RecommendedSchedule } from '@/domain/service/ScheduleRecommendService'
+
+/** 기준일 기준으로 다음 평일(월~목, 공휴일 제외)을 YYYY-MM-DD로 반환 */
+function nextBusinessDay(): string {
+  const hd = new Holidays('KR')
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+  const next = new Date(kstNow)
+  next.setUTCDate(next.getUTCDate() + 1)
+  while (true) {
+    const day = next.getUTCDay()
+    if (day >= 1 && day <= 4 && !hd.isHoliday(next)) break
+    next.setUTCDate(next.getUTCDate() + 1)
+  }
+  const y = next.getUTCFullYear()
+  const m = String(next.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(next.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
 async function resetReservation(interview: Interview): Promise<void> {
   const reservations = await roomReservationRepository.findByInterviewId(interview.id)
@@ -158,8 +176,11 @@ export function useSendSlack() {
         throw new Error('슬랙 발송에 실패했습니다. 채널에 봇이 초대되어 있는지 확인해주세요.')
       }
 
-      // 부분 성공이든 완전 성공이든 status는 collecting으로 전환
-      await interviewRepository.update(interviewId, { status: 'collecting' })
+      // 부분 성공이든 완전 성공이든 status는 collecting으로 전환, 리마인드 예정일 계산
+      await interviewRepository.update(interviewId, {
+        status: 'collecting',
+        reminderScheduledFor: nextBusinessDay(),
+      })
 
       // 실패한 대상 목록 반환 (빈 배열 = 전원 성공)
       const partialFailures = (data.ok === false && Array.isArray(data.failed))

@@ -25,6 +25,8 @@ export interface UpdateInterviewInput {
   availabilities?: InterviewerAvailability[]
   confirmedSlot?: Interview['confirmedSlot']
   candidateOptions?: CandidateOption[] | null
+  reminderScheduledFor?: string
+  reminderSentAt?: Date
 }
 
 export interface IInterviewRepository {
