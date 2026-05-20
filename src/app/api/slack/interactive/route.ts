@@ -61,13 +61,19 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     positionName: string
   }
 
+  const container = payload.container as Record<string, unknown> | undefined
+  const messageTs = container?.message_ts as string | undefined
+  const channelId = container?.channel_id as string | undefined
+
+  // 원본 메시지 section 텍스트 추출 (제출 후 메시지 업데이트에 사용)
+  const originalMessage = payload.message as Record<string, unknown> | undefined
+  const originalBlocks = originalMessage?.blocks as { type: string; text?: { text: string } }[] | undefined
+  const sectionText = originalBlocks?.find((b) => b.type === 'section')?.text?.text ?? ''
+
   // 인터뷰 존재 확인 — 삭제된 경우 원본 메시지를 비활성화하고 종료
   const db = adminDb()
   const interviewSnap = await db.collection(COLLECTIONS.INTERVIEWS).doc(buttonValue.interviewId).get()
   if (!interviewSnap.exists) {
-    const container = payload.container as Record<string, unknown> | undefined
-    const messageTs = container?.message_ts as string | undefined
-    const channelId = container?.channel_id as string | undefined
     if (messageTs && channelId) {
       try {
         await slack.chat.update({
@@ -147,7 +153,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     view: {
       type: 'modal',
       callback_id: 'availability_submit',
-      private_metadata: JSON.stringify({ interviewId: buttonValue.interviewId }),
+      private_metadata: JSON.stringify({ interviewId: buttonValue.interviewId, messageTs, channelId, sectionText }),
       title: { type: 'plain_text', text: '가용 일정 선택' },
       submit: { type: 'plain_text', text: '제출' },
       close: { type: 'plain_text', text: '취소' },
@@ -189,7 +195,12 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
   if ((view.callback_id as string) !== 'availability_submit') return
 
   const slackUserId = (payload.user as Record<string, unknown>).id as string
-  const { interviewId } = JSON.parse(view.private_metadata as string) as { interviewId: string }
+  const { interviewId, messageTs, channelId, sectionText } = JSON.parse(view.private_metadata as string) as {
+    interviewId: string
+    messageTs?: string
+    channelId?: string
+    sectionText?: string
+  }
   const stateValues = view.state as { values: Record<string, Record<string, unknown>> }
 
   // 슬랙 유저 ID로 면접관 조회
@@ -280,6 +291,26 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
 
   if (allSubmitted) {
     await notifyRecruiters(db, interviewData)
+  }
+
+  // 원본 슬랙 메시지의 버튼을 제출 완료 상태로 교체
+  if (messageTs && channelId) {
+    try {
+      await slack.chat.update({
+        channel: channelId,
+        ts: messageTs,
+        text: '✅ 제출 완료',
+        blocks: [
+          ...(sectionText ? [{ type: 'section' as const, text: { type: 'mrkdwn' as const, text: sectionText } }] : []),
+          {
+            type: 'context',
+            elements: [{ type: 'mrkdwn', text: '✅ *제출 완료*' }],
+          },
+        ],
+      })
+    } catch (e) {
+      console.error('[slack/interactive] 버튼 상태 업데이트 실패:', (e as Error).message)
+    }
   }
 }
 
