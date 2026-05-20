@@ -119,7 +119,7 @@ export default function InterviewersView() {
                             <Badge
                               key={name}
                               variant="secondary"
-                              className="text-xs px-2 py-0.5 bg-primary/10 text-primary border-0"
+                              className="text-xs px-2 py-0.5 bg-primary text-primary-foreground border-0"
                             >
                               {name}
                             </Badge>
@@ -155,7 +155,7 @@ export default function InterviewersView() {
                           <Badge
                             key={name}
                             variant="secondary"
-                            className="text-xs px-2 py-0.5 bg-primary/10 text-primary border-0"
+                            className="text-xs px-2 py-0.5 bg-primary text-primary-foreground border-0"
                           >
                             {name}
                           </Badge>

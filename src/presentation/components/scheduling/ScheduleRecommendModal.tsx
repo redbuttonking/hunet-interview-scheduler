@@ -92,7 +92,7 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
           {!isLoading && schedules.length === 0 && (
             <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground text-center">
               <XCircle size={28} className="opacity-40" />
-              <p className="text-sm font-medium text-foreground">인터뷰 진행 가능한 회의실이 없습니다</p>
+              <p className="text-sm font-medium text-foreground">추천 가능한 회의실이 없습니다</p>
               <p className="text-xs">캘린더에 회의실 예약을 먼저 등록하거나, 면접관 가용 일정을 다시 확인해주세요.</p>
             </div>
           )}
@@ -131,15 +131,15 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
                       className={cn(
                         'w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-all',
                         selected
-                          ? 'border-primary bg-primary shadow-sm'
+                          ? 'border-primary bg-primary/10 shadow-sm'
                           : 'border-border hover:border-primary/40 hover:bg-muted/30',
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <span className={cn('font-semibold', selected ? 'text-primary-foreground' : 'text-foreground')}>
+                        <span className={cn('font-semibold', selected ? 'text-foreground' : 'text-foreground')}>
                           {formatDate(schedule.date)}
                         </span>
-                        {selected && <CheckCircle2 size={16} className="text-primary-foreground shrink-0" />}
+                        {selected && <CheckCircle2 size={16} className="text-primary shrink-0" />}
                       </div>
 
                       <div className="flex flex-col gap-0.5 mt-1">
@@ -147,16 +147,16 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
                           const sessionRounds = interview.sessions[si]?.rounds ?? []
                           return (
                             <div key={si} className="flex items-center gap-1.5">
-                              <Clock size={12} className={cn('shrink-0', selected ? 'text-primary-foreground/70' : 'text-muted-foreground')} />
+                              <Clock size={12} className={cn('shrink-0', selected ? 'text-foreground/70' : 'text-muted-foreground')} />
                               {!isSingleSession && (
-                                <span className={cn('font-semibold text-xs shrink-0', selected ? 'text-primary-foreground' : sessionRounds.length > 0 ? (ROUND_COLORS[sessionRounds[0] as Round] ?? 'text-muted-foreground') : 'text-muted-foreground')}>
+                                <span className={cn('font-semibold text-xs shrink-0', selected ? 'text-foreground' : sessionRounds.length > 0 ? (ROUND_COLORS[sessionRounds[0] as Round] ?? 'text-muted-foreground') : 'text-muted-foreground')}>
                                   {sessionLabel(sessionRounds as Round[])}
                                 </span>
                               )}
-                              <span className={cn('text-sm', selected ? 'text-primary-foreground font-medium' : 'text-muted-foreground')}>
+                              <span className={cn('text-sm', selected ? 'text-foreground font-medium' : 'text-muted-foreground')}>
                                 {slot.startTime} ~ {slot.endTime}
                               </span>
-                              <span className={cn('text-sm font-medium', selected ? 'text-primary-foreground/80' : 'text-foreground/70')}>
+                              <span className={cn('text-sm font-medium', selected ? 'text-foreground/70' : 'text-foreground/70')}>
                                 · {slot.roomName}
                               </span>
                             </div>

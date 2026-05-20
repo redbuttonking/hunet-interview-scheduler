@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { getIdToken } from 'firebase/auth'
-import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2, RotateCcw, FileText, Users, Zap, Clock, Pencil } from 'lucide-react'
+import { Plus, CalendarDays, CheckCircle2, Circle, Send, Trash2, RotateCcw, FileText, Users, Zap, Pencil } from 'lucide-react'
 import { auth } from '@/infrastructure/firebase/config'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'

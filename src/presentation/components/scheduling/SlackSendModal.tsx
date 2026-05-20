@@ -79,7 +79,7 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
       setSendMode(initialDmIds ? 'dm' : slackChannelId ? 'channel' : 'dm')
       setSelectedDmIds(new Set(initialDmIds ?? relevantInterviewers.map((iv) => iv.id)))
     }
-  }, [open, template, slackChannelId, relevantInterviewers])
+  }, [open, template, slackChannelId, relevantInterviewers, initialDmIds])
 
   const weekDates = useMemo(() => (selectedDate ? getWeekDates(selectedDate) : []), [selectedDate])
 
