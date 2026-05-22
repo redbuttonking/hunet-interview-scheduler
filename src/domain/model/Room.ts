@@ -12,7 +12,7 @@ export interface Room {
   createdAt: Date
 }
 
-/** 회의실 예약 슬롯 — 외부 시스템에서 예약 후 수동 등록 */
+/** 회의실 예약 슬롯 — 외부 시스템에서 예약 후 수동 등록 또는 확장 프로그램으로 자동 동기화 */
 export interface RoomReservation {
   id: string
   roomId: string
@@ -23,6 +23,8 @@ export interface RoomReservation {
   status: ReservationStatus
   /** 배정된 면접 ID (조율중/확정 상태에서만 존재) */
   interviewId: string | null
+  /** 다우오피스 예약 ID (확장 프로그램으로 동기화된 경우에만 존재) */
+  externalId?: number
   createdAt: Date
   updatedAt: Date
 }
