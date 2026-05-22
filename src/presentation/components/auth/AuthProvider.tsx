@@ -103,3 +103,9 @@ export function useAuthContext(): AuthContextValue {
   if (!ctx) throw new Error('useAuthContext는 AuthProvider 내부에서만 사용 가능합니다.')
   return ctx
 }
+
+/** viewer 역할 여부 — true면 읽기 전용 */
+export function useIsViewer(): boolean {
+  const { user } = useAuthContext()
+  return user?.role === 'viewer'
+}

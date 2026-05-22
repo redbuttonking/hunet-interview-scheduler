@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const ROLE_LABEL: Record<UserRole, string> = {
   admin: '관리자',
   recruiter: '채용담당자',
+  viewer: '뷰어',
 }
 
 export default function UserManagementPage() {
@@ -28,16 +29,16 @@ export default function UserManagementPage() {
   const updateRole = useUpdateUserRole()
 
   const [addOpen, setAddOpen] = useState(false)
-  const [form, setForm] = useState({ email: '', name: '', role: 'recruiter' as UserRole })
+  const [form, setForm] = useState({ email: '', name: '', role: 'recruiter' as UserRole, password: '' })
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     try {
       await createUser.mutateAsync(form)
-      toast.success(`${form.name} 계정을 생성하고 비밀번호 설정 이메일을 발송했습니다.`)
+      toast.success(`${form.name} 계정이 생성되었습니다.`)
       setAddOpen(false)
-      setForm({ email: '', name: '', role: 'recruiter' })
+      setForm({ email: '', name: '', role: 'recruiter', password: '' })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '계정 생성에 실패했습니다.')
     }
@@ -120,11 +121,12 @@ export default function UserManagementPage() {
                         disabled={u.id === me?.uid}
                       >
                         <SelectTrigger className="h-8 w-28 text-xs">
-                          <SelectValue />
+                          <SelectValue>{ROLE_LABEL[u.role]}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="recruiter">채용담당자</SelectItem>
                           <SelectItem value="admin">관리자</SelectItem>
+                          <SelectItem value="viewer">뷰어</SelectItem>
                         </SelectContent>
                       </Select>
                     </td>
@@ -185,17 +187,27 @@ export default function UserManagementPage() {
                 onValueChange={(val) => setForm((p) => ({ ...p, role: val as UserRole }))}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>{ROLE_LABEL[form.role]}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="recruiter">채용담당자</SelectItem>
                   <SelectItem value="admin">관리자</SelectItem>
+                  <SelectItem value="viewer">뷰어</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <p className="text-xs text-muted-foreground">
-              계정 생성 후 입력한 이메일로 비밀번호 설정 링크가 자동 발송됩니다.
-            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="add-password">비밀번호</Label>
+              <Input
+                id="add-password"
+                type="password"
+                placeholder="6자 이상"
+                value={form.password}
+                onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                required
+                minLength={6}
+              />
+            </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
                 취소

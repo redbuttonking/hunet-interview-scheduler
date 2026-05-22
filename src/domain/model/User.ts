@@ -1,5 +1,5 @@
 /** 사용자 역할 */
-export type UserRole = 'admin' | 'recruiter'
+export type UserRole = 'admin' | 'recruiter' | 'viewer'
 
 /** 시스템 사용자 (채용 담당자 또는 관리자) */
 export interface User {

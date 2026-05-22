@@ -18,18 +18,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: (e as Error).message }, { status: 401 })
   }
 
-  const { email, name, role } = (await req.json()) as {
+  const { email, name, role, password } = (await req.json()) as {
     email: string
     name: string
     role: UserRole
+    password: string
   }
 
-  if (!email || !name || !role) {
-    return NextResponse.json({ error: '이메일, 이름, 역할은 필수입니다.' }, { status: 400 })
+  if (!email || !name || !role || !password) {
+    return NextResponse.json({ error: '이메일, 이름, 역할, 비밀번호는 필수입니다.' }, { status: 400 })
+  }
+
+  if (password.length < 6) {
+    return NextResponse.json({ error: '비밀번호는 6자 이상이어야 합니다.' }, { status: 400 })
   }
 
   try {
-    const userRecord = await adminAuth().createUser({ email, displayName: name })
+    const userRecord = await adminAuth().createUser({ email, displayName: name, password })
     await adminDb()
       .collection(COLLECTIONS.USERS)
       .doc(userRecord.uid)

@@ -18,6 +18,7 @@ const NAV_ITEMS = [
 const ROLE_LABEL: Record<string, string> = {
   admin: '관리자',
   recruiter: '채용담당자',
+  viewer: '뷰어',
 }
 
 interface Props {

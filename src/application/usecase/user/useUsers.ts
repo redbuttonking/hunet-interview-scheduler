@@ -1,6 +1,6 @@
 // 사용자 계정 관리 유스케이스 훅 (관리자 전용)
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getIdToken, sendPasswordResetEmail } from 'firebase/auth'
+import { getIdToken } from 'firebase/auth'
 import { auth } from '@/infrastructure/firebase/config'
 import { userRepository } from '@/infrastructure/firebase/UserRepository'
 import { UserRole } from '@/domain/model/User'
@@ -22,7 +22,7 @@ export function useUsers() {
 export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { email: string; name: string; role: UserRole }) => {
+    mutationFn: async (input: { email: string; name: string; role: UserRole; password: string }) => {
       const token = await getBearerToken()
       const res = await fetch('/api/auth/create-user', {
         method: 'POST',
@@ -32,12 +32,6 @@ export function useCreateUser() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error ?? '계정 생성에 실패했습니다.')
-      }
-      // 계정 생성은 완료 — 이메일 실패는 치명적이지 않으므로 별도 처리
-      try {
-        await sendPasswordResetEmail(auth, input.email)
-      } catch (e) {
-        console.error('비밀번호 설정 이메일 발송 실패:', (e as Error).message)
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: USERS_KEY }),
