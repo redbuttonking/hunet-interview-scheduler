@@ -37,6 +37,8 @@ export interface ProposeOptionInput {
 
 export interface IRoomReservationRepository {
   findByDateRange(startDate: string, endDate: string): Promise<RoomReservation[]>
+  /** 날짜 범위 실시간 구독 — 반환값은 unsubscribe 함수 */
+  subscribeByDateRange(startDate: string, endDate: string, onData: (reservations: RoomReservation[]) => void): () => void
   /** 인터뷰 ID로 연결된 예약 전체 조회 — cascade 삭제용 */
   findByInterviewId(interviewId: string): Promise<RoomReservation[]>
   create(input: CreateReservationInput): Promise<RoomReservation>

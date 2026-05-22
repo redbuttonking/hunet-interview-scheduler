@@ -9,6 +9,7 @@ import {
   where,
   serverTimestamp,
   runTransaction,
+  onSnapshot,
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
@@ -46,6 +47,17 @@ export const roomReservationRepository: IRoomReservationRepository = {
     )
     const snap = await getDocs(q)
     return snap.docs.map((d) => toReservation(d.id, d.data() as Record<string, unknown>))
+  },
+
+  subscribeByDateRange(startDate: string, endDate: string, onData: (reservations: RoomReservation[]) => void): () => void {
+    const q = query(
+      collection(db, COLLECTIONS.ROOM_RESERVATIONS),
+      where('date', '>=', startDate),
+      where('date', '<=', endDate),
+    )
+    return onSnapshot(q, (snap) => {
+      onData(snap.docs.map((d) => toReservation(d.id, d.data() as Record<string, unknown>)))
+    })
   },
 
   async create(input: CreateReservationInput): Promise<RoomReservation> {
