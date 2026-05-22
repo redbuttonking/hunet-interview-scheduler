@@ -4,6 +4,16 @@ import { adminDb } from '@/infrastructure/firebase/adminConfig'
 import { COLLECTIONS } from '@/infrastructure/firebase/collections'
 import { FieldValue } from 'firebase-admin/firestore'
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
+}
+
 function verifyApiKey(req: NextRequest): void {
   const key = req.headers.get('Authorization')?.replace('Bearer ', '')
   if (!key || key !== process.env.ROOM_SYNC_API_KEY) throw new Error('인증 실패')
@@ -36,11 +46,15 @@ async function findByExternalId(externalId: number) {
   return snap.docs[0]
 }
 
+function json(body: unknown, status = 200) {
+  return NextResponse.json(body, { status, headers: CORS_HEADERS })
+}
+
 export async function POST(req: NextRequest) {
   try {
     verifyApiKey(req)
   } catch {
-    return NextResponse.json({ error: '인증 실패' }, { status: 401 })
+    return json({ error: '인증 실패' }, 401)
   }
 
   const body = (await req.json()) as {
@@ -53,7 +67,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!body.action || !body.externalId) {
-    return NextResponse.json({ error: '필수 값 누락' }, { status: 400 })
+    return json({ error: '필수 값 누락' }, 400)
   }
 
   try {
@@ -62,7 +76,7 @@ export async function POST(req: NextRequest) {
       if (existing) {
         await adminDb().collection(COLLECTIONS.ROOM_RESERVATIONS).doc(existing.id).delete()
       }
-      return NextResponse.json({ ok: true })
+      return json({ ok: true })
     }
 
     if (!body.date || !body.startTime || !body.endTime) {
@@ -99,8 +113,8 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    return NextResponse.json({ ok: true })
+    return json({ ok: true })
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+    return json({ error: (e as Error).message }, 500)
   }
 }
