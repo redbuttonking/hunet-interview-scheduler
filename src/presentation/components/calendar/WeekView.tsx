@@ -128,7 +128,7 @@ export default function WeekView({
         {/* 요일/날짜 헤더 */}
         <div
           className="grid border-b border-border"
-          style={{ gridTemplateColumns: '110px repeat(5, 1fr)' }}
+          style={{ gridTemplateColumns: '150px repeat(5, 1fr)' }}
         >
           <div className="px-3 py-3 bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center">
             회의실
@@ -173,7 +173,7 @@ export default function WeekView({
               <div
                 key={room.id}
                 className="grid"
-                style={{ gridTemplateColumns: '110px repeat(5, 1fr)' }}
+                style={{ gridTemplateColumns: '150px repeat(5, 1fr)' }}
               >
                 <div className="flex items-start px-3 py-3 bg-muted/10 border-r border-border min-h-[96px]">
                   <span className="text-xs font-semibold text-foreground leading-tight pt-0.5">

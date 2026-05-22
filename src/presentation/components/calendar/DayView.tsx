@@ -194,7 +194,7 @@ export default function DayView({
         {/* 시간 헤더 행 */}
         <div
           className="grid border-b border-border bg-muted/40"
-          style={{ gridTemplateColumns: '110px 1fr' }}
+          style={{ gridTemplateColumns: '150px 1fr' }}
         >
           <div className="px-3 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center border-r border-border">
             회의실
@@ -234,7 +234,7 @@ export default function DayView({
                 <div
                   key={room.id}
                   className="grid"
-                  style={{ gridTemplateColumns: '110px 1fr' }}
+                  style={{ gridTemplateColumns: '150px 1fr' }}
                 >
                   {/* 회의실명 */}
                   <div className="flex items-center px-3 py-0 bg-muted/10 border-r border-border">
