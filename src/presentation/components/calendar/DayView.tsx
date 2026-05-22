@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Room, RoomReservation, ReservationStatus } from '@/domain/model/Room'
 import { hasTimeOverlap } from '@/lib/reservationUtils'
+import { useIsViewer } from '@/presentation/components/auth/AuthProvider'
 
 // 09:00 ~ 18:00
 const DAY_START = 9 * 60
@@ -70,6 +71,7 @@ export default function DayView({
   onCreateDraft,
   onEditReservation,
 }: Props) {
+  const isViewer = useIsViewer()
   const dateStr = format(date, 'yyyy-MM-dd')
   const dayRes = reservations.filter((r) => r.date === dateStr)
   const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
@@ -116,6 +118,7 @@ export default function DayView({
   }, [drag, handleMouseMove, handleMouseUp])
 
   function handleRowMouseDown(e: React.MouseEvent<HTMLDivElement>, roomId: string) {
+    if (isViewer) return
     e.preventDefault()
     const row = rowRefs.current.get(roomId)
     if (!row) return
@@ -166,22 +169,24 @@ export default function DayView({
         </div>
 
         {/* 예약 추가 */}
-        <Button
-          size="sm"
-          className="gap-1.5"
-          disabled={rooms.length === 0}
-          onClick={() =>
-            onCreateDraft({
-              roomId: rooms[0].id,
-              date: dateStr,
-              startTime: '10:00',
-              endTime: '11:00',
-            })
-          }
-        >
-          <Plus size={14} />
-          예약 추가
-        </Button>
+        {!isViewer && (
+          <Button
+            size="sm"
+            className="gap-1.5"
+            disabled={rooms.length === 0}
+            onClick={() =>
+              onCreateDraft({
+                roomId: rooms[0].id,
+                date: dateStr,
+                startTime: '10:00',
+                endTime: '11:00',
+              })
+            }
+          >
+            <Plus size={14} />
+            예약 추가
+          </Button>
+        )}
       </div>
 
       {/* 캘린더 그리드 (CalendarEX 스타일) */}
@@ -242,7 +247,7 @@ export default function DayView({
                       if (el) rowRefs.current.set(room.id, el)
                       else rowRefs.current.delete(room.id)
                     }}
-                    className="relative select-none cursor-crosshair"
+                    className={cn('relative select-none', isViewer ? 'cursor-default' : 'cursor-crosshair')}
                     style={{ height: 88 }}
                     onMouseDown={(e) => handleRowMouseDown(e, room.id)}
                   >
@@ -282,7 +287,7 @@ export default function DayView({
                           }}
                           onClick={(e) => {
                             e.stopPropagation()
-                            onEditReservation(res)
+                            if (!isViewer) onEditReservation(res)
                           }}
                         >
                           <div className="px-2 py-1 h-full flex flex-col justify-center overflow-hidden">

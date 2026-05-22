@@ -7,6 +7,7 @@ import { ko } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Room, RoomReservation, ReservationStatus } from '@/domain/model/Room'
+import { useIsViewer } from '@/presentation/components/auth/AuthProvider'
 import RoomManageModal from './RoomManageModal'
 
 const STATUS_PILL: Record<ReservationStatus, string> = {
@@ -49,6 +50,7 @@ export default function WeekView({
   onCreateDraft,
   onEditReservation,
 }: Props) {
+  const isViewer = useIsViewer()
   const [roomModalOpen, setRoomModalOpen] = useState(false)
   const todayStr = format(new Date(), 'yyyy-MM-dd')
 
@@ -81,28 +83,30 @@ export default function WeekView({
               오늘
             </Button>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setRoomModalOpen(true)}>
-              <Settings2 size={14} />
-              <span className="">회의실 관리</span>
-            </Button>
-            <Button
-              size="sm"
-              className="gap-1.5"
-              disabled={rooms.length === 0}
-              onClick={() =>
-                onCreateDraft({
-                  roomId: rooms[0].id,
-                  date: todayStr,
-                  startTime: '10:00',
-                  endTime: '11:00',
-                })
-              }
-            >
-              <Plus size={14} />
-              <span className="">예약 추가</span>
-            </Button>
-          </div>
+          {!isViewer && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setRoomModalOpen(true)}>
+                <Settings2 size={14} />
+                <span className="">회의실 관리</span>
+              </Button>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={rooms.length === 0}
+                onClick={() =>
+                  onCreateDraft({
+                    roomId: rooms[0].id,
+                    date: todayStr,
+                    startTime: '10:00',
+                    endTime: '11:00',
+                  })
+                }
+              >
+                <Plus size={14} />
+                <span className="">예약 추가</span>
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* 2행: 범례 + 안내 */}

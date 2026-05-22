@@ -12,12 +12,14 @@ import {
 import { Interviewer } from '@/domain/model/Interviewer'
 import { useInterviewers, useDeleteInterviewer } from '@/application/usecase/interviewer/useInterviewers'
 import { usePositions } from '@/application/usecase/position/usePositions'
+import { useIsViewer } from '@/presentation/components/auth/AuthProvider'
 import InterviewerModal from './InterviewerModal'
 
 export default function InterviewersView() {
   const { data: interviewers = [], isLoading } = useInterviewers()
   const { data: positions = [] } = usePositions()
   const deleteInterviewer = useDeleteInterviewer()
+  const isViewer = useIsViewer()
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Interviewer | null>(null)
@@ -61,10 +63,12 @@ export default function InterviewersView() {
           <h1 className="text-2xl font-bold text-foreground">면접관 관리</h1>
           <p className="text-sm text-muted-foreground mt-1">면접관을 등록하고 슬랙 ID를 관리합니다.</p>
         </div>
-        <Button onClick={handleAddClick} className="gap-2">
-          <Plus size={15} />
-          면접관 추가
-        </Button>
+        {!isViewer && (
+          <Button onClick={handleAddClick} className="gap-2">
+            <Plus size={15} />
+            면접관 추가
+          </Button>
+        )}
       </div>
 
       {/* 카드 컨테이너 */}
@@ -129,20 +133,22 @@ export default function InterviewersView() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => handleEditClick(iv)}
-                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(iv)}
-                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+                    {!isViewer && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => handleEditClick(iv)}
+                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(iv)}
+                          className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* 데스크탑 레이아웃 */}
@@ -164,20 +170,22 @@ export default function InterviewersView() {
                         <span className="text-xs text-muted-foreground">미배치</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity w-16 justify-end">
-                      <button
-                        onClick={() => handleEditClick(iv)}
-                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(iv)}
-                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+                    {!isViewer && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity w-16 justify-end">
+                        <button
+                          onClick={() => handleEditClick(iv)}
+                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(iv)}
+                          className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )

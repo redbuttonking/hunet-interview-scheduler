@@ -11,6 +11,7 @@ import { Position, Round, ALL_ROUNDS } from '@/domain/model/Position'
 import { usePositions, useDeletePosition } from '@/application/usecase/position/usePositions'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
 import { useInterviews } from '@/application/usecase/interview/useInterviews'
+import { useIsViewer } from '@/presentation/components/auth/AuthProvider'
 import PositionModal from './PositionModal'
 
 const ROUND_COLORS: Record<Round, string> = {
@@ -31,6 +32,7 @@ export default function PositionsView() {
   const { data: interviews = [] } = useInterviews()
   const deletePosition = useDeletePosition()
 
+  const isViewer = useIsViewer()
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Position | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Position | null>(null)
@@ -68,10 +70,12 @@ export default function PositionsView() {
           <h1 className="text-2xl font-bold text-foreground">포지션 관리</h1>
           <p className="text-sm text-muted-foreground mt-1">채용 절차와 면접관을 포지션별로 설정합니다.</p>
         </div>
-        <Button onClick={() => { setEditing(null); setModalOpen(true) }} className="gap-2">
-          <Plus size={15} />
-          포지션 추가
-        </Button>
+        {!isViewer && (
+          <Button onClick={() => { setEditing(null); setModalOpen(true) }} className="gap-2">
+            <Plus size={15} />
+            포지션 추가
+          </Button>
+        )}
       </div>
 
       {/* 검색 */}
@@ -132,20 +136,22 @@ export default function PositionsView() {
                 {/* 포지션명 + 액션 */}
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-bold text-foreground leading-snug">{pos.name}</p>
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <button
-                      onClick={() => { setEditing(pos); setModalOpen(true) }}
-                      className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Pencil size={12} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget(pos)}
-                      className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
+                  {!isViewer && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        onClick={() => { setEditing(pos); setModalOpen(true) }}
+                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(pos)}
+                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* 인터뷰 유형 */}
