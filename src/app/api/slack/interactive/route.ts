@@ -8,18 +8,17 @@ import type { Firestore, DocumentData } from 'firebase-admin/firestore'
 
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN)
 
-// 09:00~17:30 (시작), 09:30~18:00 (종료) — 30분 단위 드롭다운 옵션
-function buildTimeOptions(startMin: number, endMin: number) {
-  const options = []
-  for (let m = startMin; m <= endMin; m += 30) {
-    const t = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
-    options.push({ text: { type: 'plain_text' as const, text: t }, value: t })
-  }
-  return options
-}
-const START_OPTIONS = buildTimeOptions(9 * 60, 17 * 60 + 30)
-const END_OPTIONS = buildTimeOptions(9 * 60 + 30, 18 * 60)
-const CUSTOM_SLOT_COUNT = 3
+// 1시간 단위 체크박스 슬롯 (09:00~18:00, 12:00~13:00 제외)
+const HOURLY_SLOTS = [
+  { start: '09:00', end: '10:00', label: '오전 9시 ~ 10시' },
+  { start: '10:00', end: '11:00', label: '오전 10시 ~ 11시' },
+  { start: '11:00', end: '12:00', label: '오전 11시 ~ 12시' },
+  { start: '13:00', end: '14:00', label: '오후 1시 ~ 2시' },
+  { start: '14:00', end: '15:00', label: '오후 2시 ~ 3시' },
+  { start: '15:00', end: '16:00', label: '오후 3시 ~ 4시' },
+  { start: '16:00', end: '17:00', label: '오후 4시 ~ 5시' },
+  { start: '17:00', end: '18:00', label: '오후 5시 ~ 6시' },
+]
 
 // 슬랙 서명 검증
 async function verifySlackSignature(req: NextRequest, rawBody: string): Promise<boolean> {
@@ -97,53 +96,29 @@ async function handleBlockAction(payload: Record<string, unknown>) {
     return
   }
 
-  // 날짜별 오전/오후 체크박스 + 직접 시간 지정 드롭다운 블록 생성
+  // 날짜별 1시간 단위 체크박스 블록 생성
   const dateBlocks = buttonValue.dates.flatMap((date) => {
     const [, month, day] = date.split('-')
     const d = new Date(date)
     const weekdays = ['일', '월', '화', '수', '목', '금', '토']
     const label = `${month}월 ${day}일 (${weekdays[d.getDay()]})`
 
-    const customSlotBlocks = Array.from({ length: CUSTOM_SLOT_COUNT }, (_, idx) => ({
-      type: 'actions',
-      block_id: `custom_${date}_${idx}`,
-      elements: [
-        {
-          type: 'static_select',
-          action_id: `cs_${date}_${idx}`,
-          placeholder: { type: 'plain_text', text: '시작' },
-          options: START_OPTIONS,
-        },
-        {
-          type: 'static_select',
-          action_id: `ce_${date}_${idx}`,
-          placeholder: { type: 'plain_text', text: '종료' },
-          options: END_OPTIONS,
-        },
-      ],
-    }))
-
     return [
       { type: 'section', text: { type: 'mrkdwn', text: `*${label}*` } },
       {
         type: 'actions',
-        block_id: `date_${date}`,
+        block_id: `hourly_${date}`,
         elements: [
           {
             type: 'checkboxes',
             action_id: `slots_${date}`,
-            options: [
-              { text: { type: 'plain_text', text: '오전 (09:00~12:00)' }, value: `${date}_AM` },
-              { text: { type: 'plain_text', text: '오후 (13:00~18:00)' }, value: `${date}_PM` },
-            ],
+            options: HOURLY_SLOTS.map((slot) => ({
+              text: { type: 'plain_text' as const, text: slot.label },
+              value: `${date}_${slot.start}-${slot.end}`,
+            })),
           },
         ],
       },
-      {
-        type: 'context',
-        elements: [{ type: 'plain_text', text: '직접 시간 지정' }],
-      },
-      ...customSlotBlocks,
       { type: 'divider' },
     ]
   })
@@ -236,32 +211,18 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
   const slots: { date: string; startTime: string; endTime: string }[] = []
 
   if (!allAvailable) {
-    // 날짜별 오전/오후 체크박스 + 직접 입력 시간대 수집
+    // 날짜별 1시간 단위 체크박스 수집 — block_id: hourly_YYYY-MM-DD
     for (const [blockId, actions] of Object.entries(stateValues.values)) {
-      if (blockId.startsWith('date_')) {
-        // 오전/오후 체크박스 — block_id: date_2026-05-19
+      if (blockId.startsWith('hourly_')) {
+        const date = blockId.slice('hourly_'.length)  // 'YYYY-MM-DD'
         for (const action of Object.values(actions)) {
           const checkboxAction = action as { selected_options?: { value: string }[] }
           for (const option of checkboxAction.selected_options ?? []) {
-            const [date, period] = option.value.split('_')
-            slots.push({
-              date,
-              startTime: period === 'AM' ? '09:00' : '13:00',
-              endTime: period === 'AM' ? '12:00' : '18:00',
-            })
+            // value 형식: 'YYYY-MM-DD_HH:MM-HH:MM'
+            const timeRange = option.value.split('_')[1]  // 'HH:MM-HH:MM'
+            const [startTime, endTime] = timeRange.split('-')  // ['HH:MM', 'HH:MM']
+            slots.push({ date, startTime, endTime })
           }
-        }
-      } else if (blockId.startsWith('custom_')) {
-        // 직접 입력 — block_id: custom_2026-05-19_0
-        const parts = blockId.split('_')
-        const date = parts[1]   // '2026-05-19'
-        const idx = parts[2]    // '0' | '1' | '2'
-        const startAction = actions[`cs_${date}_${idx}`] as { selected_option?: { value: string } } | undefined
-        const endAction = actions[`ce_${date}_${idx}`] as { selected_option?: { value: string } } | undefined
-        const startTime = startAction?.selected_option?.value
-        const endTime = endAction?.selected_option?.value
-        if (startTime && endTime && startTime < endTime) {
-          slots.push({ date, startTime, endTime })
         }
       }
     }

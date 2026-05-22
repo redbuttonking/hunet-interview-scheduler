@@ -13,6 +13,7 @@ import { Interviewer } from '@/domain/model/Interviewer'
 import { useInterviews, useDeleteInterview, useRevertConfirmation, useSendCancellationSlack } from '@/application/usecase/interview/useInterviews'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
 import { usePositions } from '@/application/usecase/position/usePositions'
+import { useIsViewer } from '@/presentation/components/auth/AuthProvider'
 import InterviewCreateModal from './InterviewCreateModal'
 import InterviewEditModal from './InterviewEditModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
@@ -21,6 +22,7 @@ import CandidateOptionsModal from './CandidateOptionsModal'
 import CandidateChoiceModal from './CandidateChoiceModal'
 import SlackSendModal from './SlackSendModal'
 import SlackTemplateModal from './SlackTemplateModal'
+import ReminderTemplateModal from './ReminderTemplateModal'
 import CandidateNotifyModal from './CandidateNotifyModal'
 
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string }> = {
@@ -66,6 +68,7 @@ export default function SchedulingView() {
   const deleteInterview = useDeleteInterview()
   const revertConfirmation = useRevertConfirmation()
   const sendCancellationSlack = useSendCancellationSlack()
+  const isViewer = useIsViewer()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
@@ -77,6 +80,7 @@ export default function SchedulingView() {
   const [resendConfirm, setResendConfirm] = useState<{ interview: Interview; interviewerId: string } | null>(null)
   const [isResending, setIsResending] = useState(false)
   const [templateOpen, setTemplateOpen] = useState(false)
+  const [reminderTemplateOpen, setReminderTemplateOpen] = useState(false)
   const [editModal, setEditModal] = useState<Interview | null>(null)
   const [notifyModal, setNotifyModal] = useState<Interview | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Interview | null>(null)
@@ -193,16 +197,22 @@ export default function SchedulingView() {
           <h1 className="text-2xl font-bold text-foreground">일정 조율</h1>
           <p className="text-sm text-muted-foreground mt-1">후보자별 인터뷰 일정을 생성하고 조율합니다.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setTemplateOpen(true)} className="gap-1.5">
-            <FileText size={14} />
-            메시지 템플릿
-          </Button>
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus size={15} />
-            새 인터뷰 만들기
-          </Button>
-        </div>
+        {!isViewer && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setReminderTemplateOpen(true)} className="gap-1.5">
+              <FileText size={14} />
+              리마인드 템플릿
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setTemplateOpen(true)} className="gap-1.5">
+              <FileText size={14} />
+              메시지 템플릿
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} className="gap-2">
+              <Plus size={15} />
+              새 인터뷰 만들기
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* 필터 */}
@@ -322,22 +332,24 @@ export default function SchedulingView() {
                       </span>
                     )}
                   </span>
-                  <div className="flex items-center gap-1">
-                    {interview.status === 'pending_slack' && (
+                  {!isViewer && (
+                    <div className="flex items-center gap-1">
+                      {interview.status === 'pending_slack' && (
+                        <button
+                          onClick={() => setEditModal(interview)}
+                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
                       <button
-                        onClick={() => setEditModal(interview)}
-                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                        onClick={() => setDeleteTarget(interview)}
+                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
                       >
-                        <Pencil size={13} />
+                        <Trash2 size={13} />
                       </button>
-                    )}
-                    <button
-                      onClick={() => setDeleteTarget(interview)}
-                      className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+                    </div>
+                  )}
                 </div>
                 {/* 후보자 정보 */}
                 <div className="flex items-center gap-2 flex-wrap">
@@ -356,7 +368,7 @@ export default function SchedulingView() {
                 )}
 
                 {/* pending_slack: 슬랙 발송 버튼 */}
-                {interview.status === 'pending_slack' && (
+                {interview.status === 'pending_slack' && !isViewer && (
                   <div className="mt-4 flex justify-end">
                     <Button
                       size="sm"
@@ -390,7 +402,7 @@ export default function SchedulingView() {
                               {iv?.name ?? id}
                             </span>
                           </div>
-                          {!submitted && iv && (
+                          {!submitted && iv && !isViewer && (
                             <div className="flex items-center gap-3">
                               <button
                                 onClick={() => setResendConfirm({ interview, interviewerId: iv.id })}
@@ -406,7 +418,7 @@ export default function SchedulingView() {
                               </button>
                             </div>
                           )}
-                          {submitted && iv && (
+                          {submitted && iv && !isViewer && (
                             <button
                               onClick={() => setAvailModal({ interview, interviewer: iv })}
                               className="text-xs text-muted-foreground hover:underline"
@@ -421,7 +433,7 @@ export default function SchedulingView() {
                 )}
 
                 {/* ready_to_schedule: 즉시 확정 / 후보자 옵션 발송 */}
-                {interview.status === 'ready_to_schedule' && (
+                {interview.status === 'ready_to_schedule' && !isViewer && (
                   <div className="mt-4 flex justify-end gap-2">
                     <Button
                       size="sm"
@@ -462,23 +474,25 @@ export default function SchedulingView() {
                         ))}
                       </div>
                     )}
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => setRevertTarget(interview)}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <RotateCcw size={11} />
-                        조율 취소
-                      </button>
-                      <Button
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => setChoiceModal(interview)}
-                      >
-                        <CheckCircle2 size={13} />
-                        후보자 확정
-                      </Button>
-                    </div>
+                    {!isViewer && (
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setRevertTarget(interview)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <RotateCcw size={11} />
+                          조율 취소
+                        </button>
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => setChoiceModal(interview)}
+                        >
+                          <CheckCircle2 size={13} />
+                          후보자 확정
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -502,23 +516,25 @@ export default function SchedulingView() {
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1.5 h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
-                          onClick={() => setNotifyModal(interview)}
-                        >
-                          후보자 안내
-                        </Button>
-                        <button
-                          onClick={() => setRevertTarget(interview)}
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                        >
-                          <RotateCcw size={11} />
-                          확정 취소
-                        </button>
-                      </div>
+                      {!isViewer && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+                            onClick={() => setNotifyModal(interview)}
+                          >
+                            후보자 안내
+                          </Button>
+                          <button
+                            onClick={() => setRevertTarget(interview)}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                          >
+                            <RotateCcw size={11} />
+                            확정 취소
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -531,6 +547,7 @@ export default function SchedulingView() {
       {/* 모달 */}
       <InterviewCreateModal open={createOpen} onOpenChange={setCreateOpen} />
       <SlackTemplateModal open={templateOpen} onOpenChange={setTemplateOpen} />
+      <ReminderTemplateModal open={reminderTemplateOpen} onOpenChange={setReminderTemplateOpen} />
 
       {editModal && (
         <InterviewEditModal

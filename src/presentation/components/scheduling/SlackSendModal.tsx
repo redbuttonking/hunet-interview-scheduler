@@ -37,10 +37,6 @@ function isHoliday(date: Date): boolean {
   return hd.isHoliday(date) !== false
 }
 
-function formatDate(date: Date): string {
-  return format(date, 'yyyy년 M월 d일 (eee)', { locale: ko }) + ' (오전 / 오후)'
-}
-
 type SendMode = 'channel' | 'dm'
 
 interface Props {
@@ -59,8 +55,7 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
 
   const [selectedDate, setSelectedDate] = useState('')
   const [excludedDates, setExcludedDates] = useState<Set<string>>(new Set())
-  const [headerTemplate, setHeaderTemplate] = useState('')
-  const [footer, setFooter] = useState('')
+  const [message, setMessage] = useState('')
   const [sendMode, setSendMode] = useState<SendMode>('dm')
   const [selectedDmIds, setSelectedDmIds] = useState<Set<string>>(new Set())
 
@@ -71,11 +66,9 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
 
   useEffect(() => {
     if (open && template) {
-      setHeaderTemplate(template.header)
-      setFooter(template.footer)
+      setMessage(template.message)
       setSelectedDate('')
       setExcludedDates(new Set())
-      // initialDmIds가 있으면 DM 모드로 고정, 없으면 채널 여부로 결정
       setSendMode(initialDmIds ? 'dm' : slackChannelId ? 'channel' : 'dm')
       setSelectedDmIds(new Set(initialDmIds ?? relevantInterviewers.map((iv) => iv.id)))
     }
@@ -92,18 +85,7 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
     [weekDates, excludedDates],
   )
 
-  const filledHeader = useMemo(
-    () => fillPlaceholders(headerTemplate, interview),
-    [headerTemplate, interview],
-  )
-
-  const preview = useMemo(() => {
-    const dateLines =
-      activeDates.length > 0
-        ? activeDates.map((d) => `• ${formatDate(d)}`).join('\n')
-        : '(날짜를 선택해주세요)'
-    return `${filledHeader}\n\n${dateLines}\n\n${footer}`
-  }, [filledHeader, footer, activeDates])
+  const preview = useMemo(() => fillPlaceholders(message, interview), [message, interview])
 
   function toggleDate(dateStr: string) {
     setExcludedDates((prev) => {
@@ -243,9 +225,9 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
             )}
           </div>
 
-          {/* 날짜 선택 */}
+          {/* 날짜 선택 (슬랙 버튼에서 면접관이 선택할 수 있는 날짜 범위) */}
           <div>
-            <Label className="text-sm font-medium mb-0.5 block">날짜 선택</Label>
+            <Label className="text-sm font-medium mb-0.5 block">날짜 범위 설정</Label>
             <p className="text-xs text-muted-foreground mb-2">
               선택한 날짜가 속한 주의 월~목요일을 가져옵니다. 공휴일은 자동으로 제외됩니다.
             </p>
@@ -282,7 +264,7 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
                           (holiday || excluded) && 'text-muted-foreground line-through',
                         )}
                       >
-                        {formatDate(d)}
+                        {format(d, 'yyyy년 M월 d일 (eee)', { locale: ko })}
                         {holiday && <span className="ml-2 text-xs text-rose-500">공휴일</span>}
                       </label>
                     </div>
@@ -300,27 +282,12 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
               <code className="bg-muted px-1 rounded">{'{포지션}'}</code>,{' '}
               <code className="bg-muted px-1 rounded">{'{유형}'}</code>은 발송 시 자동으로 치환됩니다.
             </p>
-            <div className="space-y-2">
-              <textarea
-                value={headerTemplate}
-                onChange={(e) => setHeaderTemplate(e.target.value)}
-                rows={4}
-                placeholder="상단 텍스트"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-              <div className="rounded-md bg-muted/50 border border-dashed border-border px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap">
-                {activeDates.length > 0
-                  ? activeDates.map((d) => `• ${formatDate(d)}`).join('\n')
-                  : '날짜 목록이 여기에 표시됩니다'}
-              </div>
-              <textarea
-                value={footer}
-                onChange={(e) => setFooter(e.target.value)}
-                rows={2}
-                placeholder="하단 텍스트"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={5}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+            />
           </div>
 
           {/* 발송 미리보기 */}

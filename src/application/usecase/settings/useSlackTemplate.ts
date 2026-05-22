@@ -4,9 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { settingsRepository } from '@/infrastructure/firebase/SettingsRepository'
 
 export const DEFAULT_TEMPLATE = {
-  header:
-    '안녕하세요!\n{포지션} ({후보자명}) {유형} 인터뷰 일정 조율로 연락 드립니다~\n\n아래 날짜 중 가능하신 시간대 말씀해 주시면 감사 드리겠습니다 ^^',
-  footer: '',
+  message:
+    '안녕하세요!\n{포지션} ({후보자명}) {유형} 인터뷰 일정 조율로 연락 드립니다~\n\n아래 버튼을 눌러 가능하신 시간대를 선택해 주시면 감사 드리겠습니다 ^^',
 }
 
 const SLACK_TEMPLATE_KEY = ['settings', 'slack-template']
@@ -25,7 +24,7 @@ export function useSlackTemplate() {
 export function useSaveSlackTemplate() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { header: string; footer: string }) =>
+    mutationFn: (input: { message: string }) =>
       settingsRepository.saveSlackTemplate(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: SLACK_TEMPLATE_KEY }),
   })
