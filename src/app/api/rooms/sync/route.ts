@@ -19,10 +19,32 @@ function verifyApiKey(req: NextRequest): void {
   if (!key || key !== process.env.ROOM_SYNC_API_KEY) throw new Error('인증 실패')
 }
 
-async function findOrCreateRoom(name: string): Promise<{ id: string; name: string }> {
-  const snap = await adminDb().collection(COLLECTIONS.ROOMS).where('name', '==', name).get()
-  if (!snap.empty) return { id: snap.docs[0].id, name }
+// "[818호] 열정룸" → "열정룸" 형태로 접두사 제거
+function stripRoomPrefix(name: string): string {
+  return name.replace(/^\[.*?\]\s*/, '').trim()
+}
 
+async function findOrCreateRoom(name: string): Promise<{ id: string; name: string }> {
+  // 1. 정확한 이름으로 검색
+  const exactSnap = await adminDb().collection(COLLECTIONS.ROOMS).where('name', '==', name).get()
+  if (!exactSnap.empty) return { id: exactSnap.docs[0].id, name }
+
+  // 2. 접두사 제거 후 기존 회의실과 매칭 (예: "[818호] 열정룸" → "열정룸")
+  const baseName = stripRoomPrefix(name)
+  if (baseName && baseName !== name) {
+    const allSnap = await adminDb().collection(COLLECTIONS.ROOMS).get()
+    const matched = allSnap.docs.find((d) => {
+      const existing = (d.data().name as string) || ''
+      return existing === baseName || stripRoomPrefix(existing) === baseName
+    })
+    if (matched) {
+      // 기존 회의실 이름을 다우오피스 형식으로 업데이트
+      await adminDb().collection(COLLECTIONS.ROOMS).doc(matched.id).update({ name })
+      return { id: matched.id, name }
+    }
+  }
+
+  // 3. 없으면 신규 생성
   const allSnap = await adminDb().collection(COLLECTIONS.ROOMS).get()
   const maxOrder = allSnap.docs.reduce((max, d) => {
     const o = d.data().order
