@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { Room } from '@/domain/model/Room'
 import { useCreateRoom, useDeleteRoom, useUpdateRoomOrders } from '@/application/usecase/room/useRooms'
 
-const ITEM_HEIGHT = 48 // 아이템 높이 + gap (px)
+const ITEM_HEIGHT = 46 // 아이템 실제 높이 + gap (px)
 
 interface DragInfo {
   index: number       // 현재 드래그 중인 아이템 인덱스
@@ -30,15 +30,24 @@ export default function RoomManageModal({ open, onOpenChange, rooms }: Props) {
   const [newName, setNewName] = useState('')
   const [dragInfo, setDragInfo] = useState<DragInfo | null>(null)
 
+  // ref로 최신 값 유지 — 이벤트 핸들러 클로저 문제 방지
+  const dragRef = useRef<DragInfo | null>(null)
+  const localRoomsRef = useRef<Room[]>([])
+
   const createRoom = useCreateRoom()
   const deleteRoom = useDeleteRoom()
   const updateOrders = useUpdateRoomOrders()
+
+  useEffect(() => {
+    localRoomsRef.current = localRooms
+  }, [localRooms])
 
   useEffect(() => {
     if (open) {
       setLocalRooms([...rooms])
       setIsDirty(false)
       setNewName('')
+      dragRef.current = null
       setDragInfo(null)
     }
   }, [open, rooms])
@@ -77,35 +86,40 @@ export default function RoomManageModal({ open, onOpenChange, rooms }: Props) {
 
   const handleGripMouseDown = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault()
-    setDragInfo({ index, startY: e.clientY, currentY: e.clientY })
+    const info = { index, startY: e.clientY, currentY: e.clientY }
+    dragRef.current = info
+    setDragInfo(info)
   }, [])
 
+  // 마운트 시 한 번만 등록 — dragInfo 변경 때마다 재등록하면 mouseup을 놓칠 수 있음
   useEffect(() => {
-    if (!dragInfo) return
-
     function onMouseMove(e: MouseEvent) {
-      setDragInfo((prev) => prev ? { ...prev, currentY: e.clientY } : null)
+      if (!dragRef.current) return
+      const updated = { ...dragRef.current, currentY: e.clientY }
+      dragRef.current = updated
+      setDragInfo({ ...updated })
     }
 
     function onMouseUp() {
-      setDragInfo((prev) => {
-        if (!prev) return null
-        const offset = prev.currentY - prev.startY
-        const newIndex = Math.max(
-          0,
-          Math.min(Math.round(prev.index + offset / ITEM_HEIGHT), localRooms.length - 1),
-        )
-        if (newIndex !== prev.index) {
-          setLocalRooms((rooms) => {
-            const next = [...rooms]
-            const [item] = next.splice(prev.index, 1)
-            next.splice(newIndex, 0, item)
-            return next
-          })
-          setIsDirty(true)
-        }
-        return null
-      })
+      const prev = dragRef.current
+      if (!prev) return
+      const offset = prev.currentY - prev.startY
+      const rooms = localRoomsRef.current
+      const newIndex = Math.max(
+        0,
+        Math.min(Math.round(prev.index + offset / ITEM_HEIGHT), rooms.length - 1),
+      )
+      dragRef.current = null
+      setDragInfo(null)
+      if (newIndex !== prev.index) {
+        setLocalRooms((r) => {
+          const next = [...r]
+          const [item] = next.splice(prev.index, 1)
+          next.splice(newIndex, 0, item)
+          return next
+        })
+        setIsDirty(true)
+      }
     }
 
     window.addEventListener('mousemove', onMouseMove)
@@ -114,7 +128,7 @@ export default function RoomManageModal({ open, onOpenChange, rooms }: Props) {
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseup', onMouseUp)
     }
-  }, [dragInfo, localRooms.length])
+  }, [])
 
   async function handleConfirm() {
     const updates = localRooms.map((r, i) => ({ id: r.id, order: i }))
