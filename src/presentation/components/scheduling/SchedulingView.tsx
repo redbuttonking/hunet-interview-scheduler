@@ -15,6 +15,7 @@ import { useInterviewers } from '@/application/usecase/interviewer/useInterviewe
 import { usePositions } from '@/application/usecase/position/usePositions'
 import { useIsViewer } from '@/presentation/components/auth/AuthProvider'
 import InterviewCreateModal from './InterviewCreateModal'
+import DirectConfirmModal from './DirectConfirmModal'
 import InterviewEditModal from './InterviewEditModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
 import ScheduleRecommendModal from './ScheduleRecommendModal'
@@ -27,7 +28,7 @@ import CandidateNotifyModal from './CandidateNotifyModal'
 
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string }> = {
   pending_slack: { label: '슬랙 발송 전', className: 'bg-muted text-muted-foreground' },
-  collecting: { label: '수집 중', className: 'bg-blue-50 text-blue-700' },
+  collecting: { label: '수집 중', className: 'bg-violet-50 text-violet-700' },
   ready_to_schedule: { label: '일정 추천 가능', className: 'bg-amber-50 text-amber-700' },
   pending_candidate: { label: '후보자 응답 대기', className: 'bg-emerald-50 text-emerald-700' },
   confirmed: { label: '확정', className: 'bg-blue-50 text-blue-700' },
@@ -71,6 +72,7 @@ export default function SchedulingView() {
   const isViewer = useIsViewer()
 
   const [createOpen, setCreateOpen] = useState(false)
+  const [directConfirmOpen, setDirectConfirmOpen] = useState(false)
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
   const [recommendModal, setRecommendModal] = useState<RecommendModalState | null>(null)
   const [proposeModal, setProposeModal] = useState<Interview | null>(null)
@@ -206,6 +208,10 @@ export default function SchedulingView() {
             <Button variant="outline" size="sm" onClick={() => setTemplateOpen(true)} className="gap-1.5">
               <FileText size={14} />
               메시지 템플릿
+            </Button>
+            <Button variant="outline" onClick={() => setDirectConfirmOpen(true)} className="gap-2">
+              <CheckCircle2 size={15} />
+              확정 등록
             </Button>
             <Button onClick={() => setCreateOpen(true)} className="gap-2">
               <Plus size={15} />
@@ -546,6 +552,7 @@ export default function SchedulingView() {
 
       {/* 모달 */}
       <InterviewCreateModal open={createOpen} onOpenChange={setCreateOpen} />
+      <DirectConfirmModal open={directConfirmOpen} onOpenChange={setDirectConfirmOpen} />
       <SlackTemplateModal open={templateOpen} onOpenChange={setTemplateOpen} />
       <ReminderTemplateModal open={reminderTemplateOpen} onOpenChange={setReminderTemplateOpen} />
 

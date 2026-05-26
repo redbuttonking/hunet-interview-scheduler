@@ -9,7 +9,10 @@ export interface CreateInterviewInput {
   sessions: { rounds: Round[] }[]
   interviewerIds: string[]
   interviewersByRound: Partial<Record<Round, string[]>>
-  availabilityPeriod: { startDate: string; endDate: string }
+  availabilityPeriod: { startDate: string; endDate: string } | null
+  /** 직접 확정 등록 시 사용 — 기본값: 'pending_slack' */
+  status?: InterviewStatus
+  confirmedSlot?: Interview['confirmedSlot']
 }
 
 export interface UpdateInterviewInput {
