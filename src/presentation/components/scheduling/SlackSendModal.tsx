@@ -5,14 +5,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import { Send } from 'lucide-react'
-import { startOfWeek, addDays, format, parseISO } from 'date-fns'
+import { addDays, format, parseISO } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import Holidays from 'date-holidays'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { DatePickerField } from '@/components/ui/date-picker'
 import { cn } from '@/lib/utils'
 import { Interview } from '@/domain/model/Interview'
 import { Interviewer } from '@/domain/model/Interviewer'
@@ -28,9 +27,17 @@ function fillPlaceholders(template: string, interview: Interview): string {
     .replace(/\{유형\}/g, interview.typeLabel)
 }
 
-function getWeekDates(dateStr: string): Date[] {
-  const monday = startOfWeek(parseISO(dateStr), { weekStartsOn: 1 })
-  return [0, 1, 2, 3].map((i) => addDays(monday, i))
+// 요청 기간 내 월~목 날짜 목록 생성
+function getPeriodDates(startDate: string, endDate: string): Date[] {
+  const dates: Date[] = []
+  let cur = parseISO(startDate)
+  const end = parseISO(endDate)
+  while (cur <= end) {
+    const day = cur.getDay()
+    if (day >= 1 && day <= 4) dates.push(new Date(cur))
+    cur = addDays(cur, 1)
+  }
+  return dates
 }
 
 function isHoliday(date: Date): boolean {
@@ -53,7 +60,6 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
   const sendSlack = useSendSlack()
   const { data: template } = useSlackTemplate()
 
-  const [selectedDate, setSelectedDate] = useState('')
   const [excludedDates, setExcludedDates] = useState<Set<string>>(new Set())
   const [message, setMessage] = useState('')
   const [sendMode, setSendMode] = useState<SendMode>('dm')
@@ -67,22 +73,25 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
   useEffect(() => {
     if (open && template) {
       setMessage(template.message)
-      setSelectedDate('')
       setExcludedDates(new Set())
       setSendMode(initialDmIds ? 'dm' : slackChannelId ? 'channel' : 'dm')
       setSelectedDmIds(new Set(initialDmIds ?? relevantInterviewers.map((iv) => iv.id)))
     }
   }, [open, template, slackChannelId, relevantInterviewers, initialDmIds])
 
-  const weekDates = useMemo(() => (selectedDate ? getWeekDates(selectedDate) : []), [selectedDate])
+  // 요청 기간 내 월~목 날짜 목록
+  const periodDates = useMemo(() => {
+    if (!interview.availabilityPeriod) return []
+    return getPeriodDates(interview.availabilityPeriod.startDate, interview.availabilityPeriod.endDate)
+  }, [interview.availabilityPeriod])
 
   const activeDates = useMemo(
     () =>
-      weekDates.filter((d) => {
+      periodDates.filter((d) => {
         const key = format(d, 'yyyy-MM-dd')
         return !isHoliday(d) && !excludedDates.has(key)
       }),
-    [weekDates, excludedDates],
+    [periodDates, excludedDates],
   )
 
   const preview = useMemo(() => fillPlaceholders(message, interview), [message, interview])
@@ -225,25 +234,17 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
             )}
           </div>
 
-          {/* 날짜 선택 (슬랙 버튼에서 면접관이 선택할 수 있는 날짜 범위) */}
+          {/* 날짜 범위 — 요청 기간 내 월~목 자동 표시 */}
           <div>
-            <Label className="text-sm font-medium mb-0.5 block">날짜 범위 설정</Label>
+            <Label className="text-sm font-medium mb-0.5 block">날짜 범위</Label>
             <p className="text-xs text-muted-foreground mb-2">
-              선택한 날짜가 속한 주의 월~목요일을 가져옵니다. 공휴일은 자동으로 제외됩니다.
+              요청 기간({interview.availabilityPeriod?.startDate} ~ {interview.availabilityPeriod?.endDate}) 내 월~목요일입니다. 공휴일은 자동 제외되며, 개별 날짜를 클릭해 제외할 수 있습니다.
             </p>
-            <DatePickerField
-              value={selectedDate}
-              onChange={(val) => {
-                setSelectedDate(val)
-                setExcludedDates(new Set())
-              }}
-              min={interview.availabilityPeriod?.startDate}
-              max={interview.availabilityPeriod?.endDate}
-              placeholder="날짜를 선택하면 해당 주 월~목이 표시됩니다"
-            />
-            {weekDates.length > 0 && (
-              <div className="mt-2.5 space-y-2">
-                {weekDates.map((d) => {
+            {periodDates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">요청 기간 내 월~목 날짜가 없습니다.</p>
+            ) : (
+              <div className="space-y-2">
+                {periodDates.map((d) => {
                   const key = format(d, 'yyyy-MM-dd')
                   const holiday = isHoliday(d)
                   const excluded = excludedDates.has(key)

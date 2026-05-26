@@ -53,6 +53,7 @@ async function handleBlockAction(payload: Record<string, unknown>) {
   if (!action || action.action_id !== 'open_availability') return
 
   const triggerId = payload.trigger_id as string
+  const slackUserId = (payload.user as Record<string, unknown>).id as string
   const buttonValue = JSON.parse(action.value as string) as {
     interviewId: string
     dates: string[]
@@ -92,6 +93,27 @@ async function handleBlockAction(payload: Record<string, unknown>) {
       } catch (e) {
         console.error('[slack/interactive] 메시지 업데이트 실패:', (e as Error).message)
       }
+    }
+    return
+  }
+
+  // 클릭한 사용자가 해당 인터뷰의 담당 면접관인지 검증
+  const interviewerQuery = await db
+    .collection(COLLECTIONS.INTERVIEWERS)
+    .where('slackId', '==', slackUserId)
+    .limit(1)
+    .get()
+
+  const interviewerIds = interviewSnap.data()!.interviewerIds as string[]
+  const isAssigned = !interviewerQuery.empty && interviewerIds.includes(interviewerQuery.docs[0].id)
+
+  if (!isAssigned) {
+    if (channelId) {
+      await slack.chat.postEphemeral({
+        channel: channelId,
+        user: slackUserId,
+        text: '이 면접의 담당 면접관으로 지정되지 않았습니다. 일정을 제출하실 수 없습니다.',
+      }).catch(() => {})
     }
     return
   }
@@ -164,10 +186,22 @@ async function handleBlockAction(payload: Record<string, unknown>) {
   })
 }
 
+// 에러 모달 블록 생성 헬퍼
+function errorModal(message: string) {
+  return {
+    type: 'modal',
+    title: { type: 'plain_text', text: '제출 불가' },
+    close: { type: 'plain_text', text: '닫기' },
+    blocks: [
+      { type: 'section', text: { type: 'mrkdwn', text: message } },
+    ],
+  }
+}
+
 // 모달 제출 처리 — 가용 일정 Firestore 저장
-async function handleViewSubmission(payload: Record<string, unknown>) {
+async function handleViewSubmission(payload: Record<string, unknown>): Promise<Record<string, unknown> | null> {
   const view = payload.view as Record<string, unknown>
-  if ((view.callback_id as string) !== 'availability_submit') return
+  if ((view.callback_id as string) !== 'availability_submit') return null
 
   const slackUserId = (payload.user as Record<string, unknown>).id as string
   const { interviewId, messageTs, channelId, sectionText } = JSON.parse(view.private_metadata as string) as {
@@ -178,7 +212,7 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
   }
   const stateValues = view.state as { values: Record<string, Record<string, unknown>> }
 
-  // 슬랙 유저 ID로 면접관 조회
+  // 슬랙 유저 ID로 면접관 조회 — 미등록 사용자 차단
   const db = adminDb()
   const interviewerSnap = await db
     .collection(COLLECTIONS.INTERVIEWERS)
@@ -186,21 +220,22 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
     .limit(1)
     .get()
 
-  let interviewerId: string
   if (interviewerSnap.empty) {
-    // 미등록 면접관 — 슬랙 프로필로 자동 등록
-    const userInfo = await slack.users.info({ user: slackUserId })
-    const user = userInfo.user as Record<string, unknown> | undefined
-    const name = (user?.real_name as string) || (user?.name as string) || '미지정'
-    const ref = await db.collection(COLLECTIONS.INTERVIEWERS).add({
-      name,
-      slackId: slackUserId,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    })
-    interviewerId = ref.id
-  } else {
-    interviewerId = interviewerSnap.docs[0].id
+    return { response_action: 'push', view: errorModal('등록된 면접관만 일정을 제출할 수 있습니다.\n시스템 관리자에게 문의해주세요.') }
+  }
+
+  const interviewerId = interviewerSnap.docs[0].id
+
+  // 해당 인터뷰의 담당 면접관인지 확인
+  const interviewRef = db.collection(COLLECTIONS.INTERVIEWS).doc(interviewId)
+  const interviewDocSnap = await interviewRef.get()
+  if (!interviewDocSnap.exists) return null
+
+  const interviewData = interviewDocSnap.data()!
+  const interviewerIds = interviewData.interviewerIds as string[]
+
+  if (!interviewerIds.includes(interviewerId)) {
+    return { response_action: 'push', view: errorModal('이 면접의 담당 면접관으로 지정되지 않아 일정을 제출할 수 없습니다.') }
   }
 
   // 전체 가능 여부 확인
@@ -229,17 +264,11 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
   }
 
   // 인터뷰 문서에 가용 일정 업데이트
-  const interviewRef = db.collection(COLLECTIONS.INTERVIEWS).doc(interviewId)
-  const interviewSnap = await interviewRef.get()
-  if (!interviewSnap.exists) return
-
-  const interviewData = interviewSnap.data()!
   const existingAvailabilities = (interviewData.availabilities ?? []) as { interviewerId: string }[]
   const filtered = existingAvailabilities.filter((a) => a.interviewerId !== interviewerId)
   const updatedAvailabilities = [...filtered, { interviewerId, allAvailable, slots }]
 
   // 전원 입력 완료 시 상태 자동 전환
-  const interviewerIds = interviewData.interviewerIds as string[]
   const allSubmitted = interviewerIds.every((id) =>
     updatedAvailabilities.some((a) => a.interviewerId === id),
   )
@@ -273,6 +302,8 @@ async function handleViewSubmission(payload: Record<string, unknown>) {
       console.error('[slack/interactive] 버튼 상태 업데이트 실패:', (e as Error).message)
     }
   }
+
+  return null
 }
 
 // 전원 제출 완료 시 채용 담당자들에게 슬랙 DM 발송
@@ -312,9 +343,8 @@ export async function POST(req: NextRequest) {
     if (payload.type === 'block_actions') {
       await handleBlockAction(payload)
     } else if (payload.type === 'view_submission') {
-      await handleViewSubmission(payload)
-      // 슬랙에 모달 닫기 응답
-      return NextResponse.json({ response_action: 'clear' })
+      const result = await handleViewSubmission(payload)
+      return NextResponse.json(result ?? { response_action: 'clear' })
     }
   } catch (err) {
     // 슬랙은 200이 아니면 사용자에게 dispatch_failed를 표시하므로 항상 200 반환

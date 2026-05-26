@@ -55,7 +55,9 @@ export default function WeekView({
   const todayStr = format(new Date(), 'yyyy-MM-dd')
 
   function getCellRes(roomId: string, dateStr: string) {
-    return reservations.filter((r) => r.roomId === roomId && r.date === dateStr)
+    return reservations
+      .filter((r) => r.roomId === roomId && r.date === dateStr)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
   }
 
   return (

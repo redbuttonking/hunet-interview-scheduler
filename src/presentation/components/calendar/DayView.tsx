@@ -227,7 +227,7 @@ export default function DayView({
         ) : (
           <div className="divide-y divide-border">
             {rooms.map((room) => {
-              const roomRes = dayRes.filter((r) => r.roomId === room.id)
+              const roomRes = dayRes.filter((r) => r.roomId === room.id).sort((a, b) => a.startTime.localeCompare(b.startTime))
               const dragging = isDragging(room.id)
 
               return (
