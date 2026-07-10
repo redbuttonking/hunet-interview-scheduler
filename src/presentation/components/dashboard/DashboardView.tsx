@@ -3,10 +3,15 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { format, startOfWeek, endOfWeek, addWeeks } from 'date-fns'
-import { CalendarCheck, ClipboardList, ArrowRight, CheckCircle2, Circle, MapPin } from 'lucide-react'
+import { AlertTriangle, CalendarCheck, ClipboardList, ArrowRight, CheckCircle2, Circle, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Interview, InterviewStatus } from '@/domain/model/Interview'
+import { Round } from '@/domain/model/Position'
+import { recommendSchedules } from '@/domain/service/ScheduleRecommendService'
 import { useInterviews } from '@/application/usecase/interview/useInterviews'
+import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
+import { usePositions } from '@/application/usecase/position/usePositions'
+import { useRoomReservations } from '@/application/usecase/room/useRoomReservations'
 
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string }> = {
   pending_slack:     { label: '슬랙 발송 전',    className: 'bg-muted text-muted-foreground' },
@@ -18,6 +23,15 @@ const STATUS_CONFIG: Record<InterviewStatus, { label: string; className: string 
 
 type WeekFilter = 'this_week' | 'next_week' | 'all'
 type PendingFilter = 'all' | Exclude<InterviewStatus, 'confirmed'>
+type AttentionLevel = 'danger' | 'warning' | 'info'
+
+interface AttentionItem {
+  key: string
+  level: AttentionLevel
+  title: string
+  description: string
+  interview?: Interview
+}
 
 const WEEK_FILTERS: { value: WeekFilter; label: string }[] = [
   { value: 'this_week', label: '이번 주' },
@@ -57,12 +71,36 @@ function formatToday(): string {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}`
 }
 
+function daysSince(date: Date): number {
+  const today = new Date(localDateStr() + 'T00:00:00')
+  const target = new Date(date)
+  target.setHours(0, 0, 0, 0)
+  return Math.floor((today.getTime() - target.getTime()) / (24 * 60 * 60 * 1000))
+}
+
 export default function DashboardView() {
   const { data: interviews = [], isLoading } = useInterviews()
+  const { data: interviewers = [] } = useInterviewers()
+  const { data: positions = [] } = usePositions()
   const [weekFilter, setWeekFilter] = useState<WeekFilter>('this_week')
   const [pendingFilter, setPendingFilter] = useState<PendingFilter>('all')
 
   const today = localDateStr()
+  const readyPeriods = useMemo(
+    () =>
+      interviews
+        .filter((iv) => iv.status === 'ready_to_schedule' && iv.availabilityPeriod)
+        .map((iv) => iv.availabilityPeriod!),
+    [interviews],
+  )
+  const recommendationStart = readyPeriods.length
+    ? readyPeriods.reduce((min, p) => (p.startDate < min ? p.startDate : min), readyPeriods[0].startDate)
+    : ''
+  const recommendationEnd = readyPeriods.length
+    ? readyPeriods.reduce((max, p) => (p.endDate > max ? p.endDate : max), readyPeriods[0].endDate)
+    : ''
+  const { data: recommendationReservations = [], isLoading: isRecommendationLoading } =
+    useRoomReservations(recommendationStart, recommendationEnd)
 
   const allUpcomingConfirmed = useMemo(
     () =>
@@ -114,6 +152,96 @@ export default function DashboardView() {
     [allPending, pendingFilter],
   )
 
+  const attentionItems = useMemo<AttentionItem[]>(() => {
+    const items: AttentionItem[] = []
+    const interviewerMap = new Map(interviewers.map((iv) => [iv.id, iv]))
+    const positionMap = new Map(positions.map((position) => [position.id, position]))
+
+    for (const iv of interviews) {
+      if (iv.status === 'collecting') {
+        const submittedIds = new Set(iv.availabilities.map((a) => a.interviewerId))
+        const missingNames = iv.interviewerIds
+          .filter((id) => !submittedIds.has(id))
+          .map((id) => interviewerMap.get(id)?.name ?? '알 수 없음')
+
+        if (missingNames.length > 0) {
+          items.push({
+            key: `missing-${iv.id}`,
+            level: 'warning',
+            title: '미제출 면접관이 있습니다.',
+            description: `${missingNames.join(', ')} 님의 가용 일정이 아직 없습니다.`,
+            interview: iv,
+          })
+        }
+
+        const position = positionMap.get(iv.positionId)
+        if (!position?.slackChannelId) {
+          items.push({
+            key: `reminder-channel-${iv.id}`,
+            level: 'info',
+            title: '리마인드 채널이 없습니다.',
+            description: '포지션에 Slack 채널 ID가 없어 자동·수동 리마인드가 막힐 수 있습니다.',
+            interview: iv,
+          })
+        }
+      }
+
+      if (iv.status === 'pending_slack') {
+        const missingSlackNames = iv.interviewerIds
+          .map((id) => interviewerMap.get(id))
+          .filter((interviewer) => interviewer && !interviewer.slackId)
+          .map((interviewer) => interviewer!.name)
+
+        if (missingSlackNames.length > 0) {
+          items.push({
+            key: `slack-id-${iv.id}`,
+            level: 'danger',
+            title: 'Slack ID가 없는 면접관이 있습니다.',
+            description: `${missingSlackNames.join(', ')} 님은 Slack 발송 대상에서 제외됩니다.`,
+            interview: iv,
+          })
+        }
+      }
+
+      if (iv.status === 'pending_candidate') {
+        const waitingDays = daysSince(iv.updatedAt)
+        if (waitingDays >= 3) {
+          items.push({
+            key: `candidate-wait-${iv.id}`,
+            level: 'warning',
+            title: '후보자 응답 대기가 오래되었습니다.',
+            description: `${waitingDays}일째 후보자 선택이 확정되지 않았습니다. 조율 취소 또는 재안내가 필요합니다.`,
+            interview: iv,
+          })
+        }
+      }
+
+      if (iv.status === 'ready_to_schedule' && iv.availabilityPeriod && !isRecommendationLoading) {
+        const sessionSpecs = iv.sessions.map((session) => {
+          const ids = [
+            ...new Set(
+              session.rounds.flatMap((round) => iv.interviewersByRound[round as Round] ?? []),
+            ),
+          ].filter((id) => iv.interviewerIds.includes(id))
+          return { interviewerIds: ids }
+        })
+        const schedules = recommendSchedules(sessionSpecs, iv.availabilities, recommendationReservations)
+        if (schedules.length === 0) {
+          items.push({
+            key: `no-slot-${iv.id}`,
+            level: 'danger',
+            title: '추천 가능한 일정이 없습니다.',
+            description: '회의실 예약이 없거나 면접관 가용 시간과 겹치는 슬롯이 없습니다.',
+            interview: iv,
+          })
+        }
+      }
+    }
+
+    const order: Record<AttentionLevel, number> = { danger: 0, warning: 1, info: 2 }
+    return items.sort((a, b) => order[a.level] - order[b.level])
+  }, [interviews, interviewers, positions, recommendationReservations, isRecommendationLoading])
+
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       {/* 헤더 */}
@@ -137,6 +265,29 @@ export default function DashboardView() {
           color="text-blue-600 bg-blue-50"
         />
       </div>
+
+      {/* 주의 필요 */}
+      <section>
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h2 className="text-lg font-bold text-foreground">주의 필요</h2>
+          <Link href="/scheduling" className="text-xs text-primary hover:underline flex items-center gap-1">
+            일정 조율로 이동 <ArrowRight size={11} />
+          </Link>
+        </div>
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+          {(isLoading || isRecommendationLoading) && <LoadingRow />}
+          {!isLoading && !isRecommendationLoading && attentionItems.length === 0 && (
+            <EmptyRow text="현재 막힌 조율 건이 없습니다." />
+          )}
+          {!isLoading && !isRecommendationLoading && attentionItems.length > 0 && (
+            <div className="divide-y divide-border">
+              {attentionItems.map((item) => (
+                <AttentionRow key={item.key} item={item} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* 확정된 인터뷰 */}
       <section>
@@ -249,6 +400,36 @@ export default function DashboardView() {
           </div>
         )}
       </section>
+    </div>
+  )
+}
+
+function AttentionRow({ item }: { item: AttentionItem }) {
+  const levelClass: Record<AttentionLevel, string> = {
+    danger: 'bg-destructive/10 text-destructive',
+    warning: 'bg-amber-50 text-amber-700',
+    info: 'bg-blue-50 text-blue-700',
+  }
+
+  return (
+    <div className="flex items-start gap-3 px-4 sm:px-5 py-4">
+      <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', levelClass[item.level])}>
+        <AlertTriangle size={16} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold text-foreground">{item.title}</p>
+          {item.interview && (
+            <span className="text-xs text-muted-foreground">
+              {item.interview.candidateName} · {item.interview.positionName}
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mt-0.5">{item.description}</p>
+      </div>
+      <Link href="/scheduling" className="text-xs text-primary hover:underline shrink-0 pt-1">
+        처리
+      </Link>
     </div>
   )
 }

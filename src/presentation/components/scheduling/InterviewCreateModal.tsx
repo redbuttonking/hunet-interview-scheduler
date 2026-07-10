@@ -3,6 +3,8 @@
 // 새 인터뷰 조율 건을 생성하는 모달 컴포넌트
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
+import { addDays, parseISO } from 'date-fns'
+import Holidays from 'date-holidays'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +23,21 @@ interface Props {
 }
 
 type ErrorKeys = 'candidateName' | 'position' | 'type' | 'interviewers' | 'period'
+
+const hd = new Holidays('KR')
+
+function hasRequestableDate(startDate: string, endDate: string): boolean {
+  let cur = parseISO(startDate)
+  const end = parseISO(endDate)
+
+  while (cur <= end) {
+    const day = cur.getDay()
+    if (day >= 1 && day <= 4 && hd.isHoliday(cur) === false) return true
+    cur = addDays(cur, 1)
+  }
+
+  return false
+}
 
 export default function InterviewCreateModal({ open, onOpenChange }: Props) {
   const { data: positions = [] } = usePositions()
@@ -81,6 +98,22 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
     if (interviewerIds.length === 0) newErrors.interviewers = '면접관을 1명 이상 선택해주세요.'
     if (!startDate || !endDate) newErrors.period = '가용 일정 요청 기간을 입력해주세요.'
     else if (startDate > endDate) newErrors.period = '종료일이 시작일보다 빠릅니다.'
+    else if (!hasRequestableDate(startDate, endDate)) newErrors.period = '요청 기간에 선택 가능한 평일(월~목)이 없습니다.'
+
+    if (selectedPosition && selectedType) {
+      const usedRounds = [...new Set(selectedType.sessions.flatMap((s) => s.rounds))] as Round[]
+      const missingRounds = usedRounds.filter((round) => (selectedPosition.interviewersByRound[round] ?? []).length === 0)
+      if (missingRounds.length > 0) {
+        newErrors.interviewers = `${missingRounds.join(', ')} 면접관이 포지션에 배치되어 있지 않습니다.`
+      }
+    }
+
+    const missingSlackNames = interviewers
+      .filter((iv) => interviewerIds.includes(iv.id) && !iv.slackId)
+      .map((iv) => iv.name)
+    if (missingSlackNames.length > 0) {
+      newErrors.interviewers = `슬랙 ID가 없는 면접관이 있습니다: ${missingSlackNames.join(', ')}`
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)

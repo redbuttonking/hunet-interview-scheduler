@@ -14,13 +14,12 @@
 | 페이지 | 기능 |
 |---|---|
 | 로그인 | 이메일+비밀번호 인증, 비활성 1시간 자동 로그아웃 |
-| 계정 관리 `/admin/users` | 관리자 전용 — 사용자 추가·삭제·역할 변경, 신규 계정 비밀번호 설정 메일 자동 발송 |
+| 설정 `/settings` | 관리자 전용 — 계정 추가·삭제·역할 변경, 알림 수신 담당자 관리, 데이터 초기화 |
 | 면접관 관리 `/interviewers` | 면접관 추가·수정·삭제, 슬랙 Member ID 관리 |
 | 포지션 관리 `/positions` | 채용 포지션·인터뷰 유형·차수별 면접관 배치, 슬랙 채널 ID 등록 |
 | 캘린더 `/calendar` | 주간·일간 뷰, 드래그로 회의실 예약 생성, 중복 예약 방지 |
-| 일정 조율 `/scheduling` | 면접 생성, 슬랙 발송, 가용 일정 수동 입력, 자동 추천, 확정·취소 |
+| 일정 조율 `/scheduling` | 면접 생성, 슬랙 발송, 슬랙 모달로 가용 일정 수집, 수동 입력, 자동 추천, 후보자 옵션 조율, 확정·취소 |
 | 대시보드 `/dashboard` | 예정 면접 목록, 조율 대기 현황, 상태별 필터 |
-| 설정 `/settings` | 관리자 전용 데이터 초기화 (컬렉션별 선택 삭제) |
 
 ---
 
@@ -69,6 +68,9 @@ cp .env.example .env.local
 | `FIREBASE_ADMIN_CLIENT_EMAIL` | Admin SDK 클라이언트 이메일 | 동일 |
 | `FIREBASE_ADMIN_PRIVATE_KEY` | Admin SDK 비공개 키 | 동일 (따옴표 포함해서 입력) |
 | `SLACK_BOT_TOKEN` | 슬랙 봇 토큰 | Slack API → 앱 → OAuth & Permissions |
+| `SLACK_SIGNING_SECRET` | 슬랙 인터랙티브 메시지 서명 검증 키 | Slack API → 앱 → Basic Information |
+| `CRON_SECRET` | Vercel Cron 리마인드 API 인증 토큰 | 임의의 긴 문자열 생성 후 Vercel 환경변수에 동일 등록 |
+| `ROOM_SYNC_API_KEY` | 회의실 예약 동기화 API 키 | 선택 항목 — Chrome 확장 프로그램 연동 시에만 사용 |
 
 ### 3. Firebase 초기 설정
 
@@ -91,6 +93,8 @@ npm run dev       # 개발 서버 (http://localhost:3000)
 npm run build     # 프로덕션 빌드
 npm run lint      # 린트 검사
 ```
+
+Windows PowerShell에서 `npm` 실행이 정책 문제로 막히면 `npm.cmd run dev`처럼 `npm.cmd`를 사용합니다.
 
 ---
 
@@ -129,6 +133,14 @@ Channel ID 확인 방법: 채널 우클릭 → **Copy link** → URL 마지막 �
 - **면접관 1명**: 개인 DM으로 발송
 - **면접관 2명 이상 + 채널 ID 등록된 포지션**: 채널 발송 / 개인 DM 중 선택 가능
 - 발송 실패 시 면접 상태가 `수집 중`으로 넘어가지 않음
+- 면접관은 슬랙 메시지의 **일정 선택하기** 버튼을 눌러 가용 일정을 제출함
+- 슬랙 인터랙티브 메시지를 쓰려면 Slack 앱의 Interactivity Request URL을 `/api/slack/interactive`로 설정해야 함
+
+### 자동 리마인드
+
+- 슬랙 발송 다음 평일(월~목, 공휴일 제외)에 미제출 면접관을 채널에서 @멘션합니다.
+- Vercel Cron이 `/api/cron/remind`를 호출합니다.
+- `CRON_SECRET` 환경변수가 Vercel에 없거나 요청 헤더와 다르면 리마인드는 실행되지 않습니다.
 
 ---
 
@@ -195,9 +207,10 @@ src/
 - **방식**: Firebase Auth 이메일+비밀번호
 - **세션 유지**: LOCAL (브라우저 로컬 저장소) — 컴퓨터를 꺼도 로그인 유지
 - **자동 로그아웃**: 마지막 동작(마우스·키보드·스크롤)으로부터 1시간 경과 시 자동 로그아웃
-- **역할**: `admin`(관리자) / `recruiter`(채용담당자)
-  - 관리자만 `/admin/users` 접근 가능
-  - 신규 계정 생성 시 비밀번호 설정 이메일 자동 발송
+- **역할**: `admin`(관리자) / `recruiter`(채용담당자) / `viewer`(뷰어)
+  - 관리자만 `/settings` 접근 가능
+  - `viewer`는 주요 화면을 조회할 수 있지만 생성·수정·삭제 버튼이 제한됨
+  - 신규 계정 생성 시 관리자가 초기 비밀번호를 직접 입력함
 
 ---
 
