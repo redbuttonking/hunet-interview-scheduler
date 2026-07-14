@@ -17,6 +17,8 @@ export interface CreateInterviewInput {
   /** 수동 일정 등록 시 생성 시점에 저장하는 가용 일정 */
   availabilities?: InterviewerAvailability[]
   confirmedSlot?: Interview['confirmedSlot']
+  slackSendMode?: Interview['slackSendMode']
+  slackTargetIds?: string[]
 }
 
 export interface UpdateInterviewInput {
@@ -35,6 +37,8 @@ export interface UpdateInterviewInput {
   candidateOptions?: CandidateOption[] | null
   reminderScheduledFor?: string
   reminderSentAt?: Date
+  slackSendMode?: Interview['slackSendMode']
+  slackTargetIds?: string[]
 }
 
 export interface IInterviewRepository {

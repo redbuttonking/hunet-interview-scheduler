@@ -30,6 +30,8 @@ function toInterview(id: string, data: Record<string, unknown>): Interview {
     confirmedSlot: (data.confirmedSlot as Interview['confirmedSlot']) ?? null,
     reminderScheduledFor: (data.reminderScheduledFor as string | undefined) ?? undefined,
     reminderSentAt: (data.reminderSentAt as { toDate(): Date } | null)?.toDate() ?? undefined,
+    slackSendMode: (data.slackSendMode as Interview['slackSendMode'] | null) ?? undefined,
+    slackTargetIds: (data.slackTargetIds as string[] | undefined) ?? undefined,
     createdAt: (data.createdAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
     updatedAt: (data.updatedAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
   }
@@ -68,6 +70,8 @@ class InterviewFirestoreRepository implements IInterviewRepository {
       availabilities,
       confirmedSlot,
       candidateOptions: null,
+      slackSendMode: input.slackSendMode ?? null,
+      slackTargetIds: input.slackTargetIds ?? [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })

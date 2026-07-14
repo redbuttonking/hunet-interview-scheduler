@@ -136,6 +136,7 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
       const result = await sendSlack.mutateAsync({
         interviewId: interview.id,
         slackIds: targets,
+        sendMode,
         message: preview,
         dates: activeDates.map((d) => format(d, 'yyyy-MM-dd')),
         candidateName: interview.candidateName,

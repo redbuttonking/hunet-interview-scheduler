@@ -4,12 +4,15 @@ import { getIdToken } from 'firebase/auth'
 import Holidays from 'date-holidays'
 import { auth } from '@/infrastructure/firebase/config'
 import { interviewRepository } from '@/infrastructure/firebase/InterviewRepository'
+import { interviewerRepository } from '@/infrastructure/firebase/InterviewerRepository'
 import { roomReservationRepository } from '@/infrastructure/firebase/RoomReservationRepository'
 import { CreateInterviewInput, UpdateInterviewInput } from '@/domain/repository/IInterviewRepository'
 import { UpdateReservationInput, ProposeOptionInput } from '@/domain/repository/IRoomReservationRepository'
 import { Interview, InterviewerAvailability, CandidateOption } from '@/domain/model/Interview'
+import { Interviewer } from '@/domain/model/Interviewer'
 import { RoomReservation } from '@/domain/model/Room'
 import { RecommendedSchedule } from '@/domain/service/ScheduleRecommendService'
+import { buildChannelConfirmMessage, buildDmConfirmMessage } from './confirmSlackMessage'
 
 /** 기준일 기준으로 다음 평일(월~목, 공휴일 제외)을 YYYY-MM-DD로 반환 */
 function nextBusinessDay(): string {
@@ -26,6 +29,48 @@ function nextBusinessDay(): string {
   const m = String(next.getUTCMonth() + 1).padStart(2, '0')
   const d = String(next.getUTCDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
+}
+
+async function postSlackMessage(slackIds: string[], message: string): Promise<string[]> {
+  if (!slackIds.length) return []
+  if (!auth.currentUser) return slackIds
+
+  const token = await getIdToken(auth.currentUser)
+  const res = await fetch('/api/slack/notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ slackIds, message }),
+  })
+  const data = (await res.json().catch(() => ({}))) as { failed?: string[] }
+  if (!res.ok) return slackIds
+  return Array.isArray(data.failed) ? data.failed : []
+}
+
+async function notifyInterviewConfirmed(interview: Interview): Promise<void> {
+  if (!interview.confirmedSlot || !interview.slackSendMode) return
+
+  if (interview.slackSendMode === 'channel') {
+    const targets = interview.slackTargetIds ?? []
+    const failed = await postSlackMessage(targets, buildChannelConfirmMessage(interview))
+    if (failed.length > 0) console.warn('[Slack] 확정 안내 채널 발송 실패:', failed)
+    return
+  }
+
+  const allInterviewers = await interviewerRepository.findAll()
+  const bySlackId = new Map(allInterviewers.filter((iv) => iv.slackId).map((iv) => [iv.slackId, iv]))
+  const fallbackSlackIds = allInterviewers
+    .filter((iv) => interview.interviewerIds.includes(iv.id) && iv.slackId)
+    .map((iv) => iv.slackId)
+  const targetSlackIds = (interview.slackTargetIds?.length ? interview.slackTargetIds : fallbackSlackIds)
+    .filter((slackId) => bySlackId.has(slackId))
+
+  const failed: string[] = []
+  for (const slackId of targetSlackIds) {
+    const interviewer = bySlackId.get(slackId) as Interviewer
+    const result = await postSlackMessage([slackId], buildDmConfirmMessage(interview, interviewer.id))
+    failed.push(...result)
+  }
+  if (failed.length > 0) console.warn('[Slack] 확정 안내 DM 발송 실패:', failed)
 }
 
 async function resetReservation(interview: Interview): Promise<void> {
@@ -150,6 +195,7 @@ export function useSendSlack() {
     mutationFn: async ({
       interviewId,
       slackIds,
+      sendMode,
       message,
       dates,
       candidateName,
@@ -157,6 +203,7 @@ export function useSendSlack() {
     }: {
       interviewId: string
       slackIds: string[]
+      sendMode: 'channel' | 'dm'
       message: string
       dates?: string[]
       candidateName?: string
@@ -176,16 +223,19 @@ export function useSendSlack() {
         throw new Error('슬랙 발송에 실패했습니다. 채널에 봇이 초대되어 있는지 확인해주세요.')
       }
 
-      // 부분 성공이든 완전 성공이든 status는 collecting으로 전환, 리마인드 예정일 계산
-      await interviewRepository.update(interviewId, {
-        status: 'collecting',
-        reminderScheduledFor: nextBusinessDay(),
-      })
-
       // 실패한 대상 목록 반환 (빈 배열 = 전원 성공)
       const partialFailures = (data.ok === false && Array.isArray(data.failed))
         ? (data.failed as string[])
         : []
+      const successfulTargets = slackIds.filter((id) => !partialFailures.includes(id))
+
+      await interviewRepository.update(interviewId, {
+        status: 'collecting',
+        reminderScheduledFor: nextBusinessDay(),
+        slackSendMode: sendMode,
+        slackTargetIds: successfulTargets,
+      })
+
       return { partialFailures }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: INTERVIEWS_KEY }),
@@ -308,20 +358,30 @@ export function useConfirmCandidateChoice() {
           .map((id) => roomReservationRepository.update(id, { status: 'reserved', interviewId: null })),
       ])
 
-      return interviewRepository.update(interview.id, {
+      const confirmedSlot = {
+        date: chosenOption.date,
+        startTime: chosenOption.slots[0].startTime,
+        endTime: chosenOption.slots[chosenOption.slots.length - 1].endTime,
+        slots: chosenOption.slots.map((s) => ({
+          startTime: s.startTime,
+          endTime: s.endTime,
+          roomId: s.roomId,
+          roomName: s.roomName,
+        })),
+      }
+
+      await interviewRepository.update(interview.id, {
         status: 'confirmed',
         candidateOptions: null,
-        confirmedSlot: {
-          date: chosenOption.date,
-          startTime: chosenOption.slots[0].startTime,
-          endTime: chosenOption.slots[chosenOption.slots.length - 1].endTime,
-          slots: chosenOption.slots.map((s) => ({
-            startTime: s.startTime,
-            endTime: s.endTime,
-            roomId: s.roomId,
-            roomName: s.roomName,
-          })),
-        },
+        confirmedSlot,
+      })
+      await notifyInterviewConfirmed({
+        ...interview,
+        status: 'confirmed',
+        candidateOptions: null,
+        confirmedSlot,
+      }).catch((error) => {
+        console.warn('[Slack] 확정 안내 발송 중 오류:', error)
       })
     },
     onSuccess: () => {
@@ -352,20 +412,28 @@ export function useConfirmSchedule() {
         })),
       )
 
-      return interviewRepository.update(interviewId, {
+      const confirmedSlot = {
+        date: schedule.date,
+        startTime: schedule.slots[0].startTime,
+        endTime: schedule.slots[schedule.slots.length - 1].endTime,
+        slots: schedule.slots.map((s) => ({
+          startTime: s.startTime,
+          endTime: s.endTime,
+          roomId: s.roomId,
+          roomName: s.roomName,
+        })),
+      }
+
+      await interviewRepository.update(interviewId, {
         status: 'confirmed',
-        confirmedSlot: {
-          date: schedule.date,
-          startTime: schedule.slots[0].startTime,
-          endTime: schedule.slots[schedule.slots.length - 1].endTime,
-          slots: schedule.slots.map((s) => ({
-            startTime: s.startTime,
-            endTime: s.endTime,
-            roomId: s.roomId,
-            roomName: s.roomName,
-          })),
-        },
+        confirmedSlot,
       })
+      const interview = await interviewRepository.findById(interviewId)
+      if (interview) {
+        await notifyInterviewConfirmed({ ...interview, status: 'confirmed', confirmedSlot }).catch((error) => {
+          console.warn('[Slack] 확정 안내 발송 중 오류:', error)
+        })
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: INTERVIEWS_KEY })

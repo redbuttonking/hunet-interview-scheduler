@@ -68,6 +68,10 @@ export interface Interview {
   reminderScheduledFor?: string
   /** 리마인드 발송 완료 시각 */
   reminderSentAt?: Date
+  /** 마지막 일정 조율 Slack 발송 방식 */
+  slackSendMode?: 'channel' | 'dm'
+  /** 마지막 일정 조율 Slack 발송 대상 ID 목록 */
+  slackTargetIds?: string[]
   createdAt: Date
   updatedAt: Date
 }
