@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Briefcase, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Briefcase, Search, Hash } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -182,6 +182,15 @@ export default function PositionsView() {
                     ))}
                   </div>
                 </div>
+
+                {pos.slackChannelId && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Hash size={12} className="shrink-0" />
+                    <span className="truncate">
+                      {pos.slackChannelName ?? pos.slackChannelId}
+                    </span>
+                  </div>
+                )}
 
                 {/* 면접관 — 항상 표시 */}
                 <div className="pt-2.5 border-t border-border flex flex-col gap-1">

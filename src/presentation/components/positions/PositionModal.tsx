@@ -12,6 +12,8 @@ import { Position, Round, InterviewType, ALL_ROUNDS } from '@/domain/model/Posit
 import { Interviewer } from '@/domain/model/Interviewer'
 import { useInterviewers } from '@/application/usecase/interviewer/useInterviewers'
 import { useCreatePosition, useUpdatePosition } from '@/application/usecase/position/usePositions'
+import { useSlackChannels } from '@/application/usecase/slack/useSlackDirectory'
+import type { SlackDirectoryChannel } from '@/infrastructure/slack/SlackDirectoryService'
 
 interface Props {
   open: boolean
@@ -110,6 +112,121 @@ function InterviewerSearch({
   )
 }
 
+function SlackChannelSelect({
+  selectedId,
+  selectedName,
+  channels,
+  isLoading,
+  error,
+  onSelect,
+  onClear,
+}: {
+  selectedId: string
+  selectedName: string
+  channels: SlackDirectoryChannel[]
+  isLoading: boolean
+  error: Error | null
+  onSelect: (channel: SlackDirectoryChannel) => void
+  onClear: () => void
+}) {
+  const [query, setQuery] = useState('')
+  const [focused, setFocused] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const filtered = channels.filter((channel) => {
+    if (!query.trim()) return true
+    const q = query.toLowerCase()
+    return channel.name.toLowerCase().includes(q) || channel.id.toLowerCase().includes(q)
+  })
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setFocused(false)
+        setQuery('')
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div ref={containerRef} className="relative flex flex-col gap-1.5">
+      <Label htmlFor="slackChannelSearch">Slack 채널 <span className="text-muted-foreground font-normal">(선택)</span></Label>
+      {selectedId ? (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium">
+              {selectedName ? `#${selectedName}` : selectedId}
+            </div>
+            <div className="truncate text-xs text-muted-foreground">{selectedId}</div>
+          </div>
+          <Button type="button" variant="ghost" size="sm" onClick={onClear}>
+            변경
+          </Button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="slackChannelSearch"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setFocused(true)}
+            placeholder={isLoading ? 'Slack 채널을 불러오는 중입니다.' : '채널명으로 검색하세요.'}
+            className="pl-9"
+            disabled={isLoading}
+          />
+        </div>
+      )}
+      {!selectedId && focused && !isLoading && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border border-border bg-popover shadow-md overflow-hidden">
+          {error ? (
+            <div className="px-3 py-3 text-xs text-destructive text-center">
+              {error.message}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="px-3 py-3 text-xs text-muted-foreground text-center">
+              검색 결과가 없습니다.
+            </div>
+          ) : (
+            <div className="max-h-56 overflow-y-auto">
+              {filtered.map((channel) => (
+                <button
+                  key={channel.id}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    onSelect(channel)
+                    setFocused(false)
+                    setQuery('')
+                  }}
+                  className="flex items-center justify-between w-full gap-3 px-3 py-2 text-left hover:bg-muted"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">#{channel.name}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {channel.isPrivate ? '비공개' : '공개'} · {channel.id}
+                    </span>
+                  </span>
+                  {channel.isMember && (
+                    <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      참여 중
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Slack 앱이 초대된 비공개 채널만 목록에 표시됩니다.
+      </p>
+    </div>
+  )
+}
+
 const ROUND_COLORS: Record<Round, string> = {
   '1차': 'bg-blue-50 text-blue-700 border-blue-200',
   '2차': 'bg-violet-50 text-violet-700 border-violet-200',
@@ -119,6 +236,7 @@ const ROUND_COLORS: Record<Round, string> = {
 export default function PositionModal({ open, onOpenChange, position }: Props) {
   const isEdit = position !== null
   const { data: interviewers = [] } = useInterviewers()
+  const slackChannels = useSlackChannels(open)
   const create = useCreatePosition()
   const update = useUpdatePosition()
   const isPending = create.isPending || update.isPending
@@ -127,6 +245,7 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
   const [interviewTypes, setInterviewTypes] = useState<InterviewType[]>([])
   const [ivByRound, setIvByRound] = useState<Partial<Record<Round, string[]>>>({})
   const [slackChannelId, setSlackChannelId] = useState('')
+  const [slackChannelName, setSlackChannelName] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -138,11 +257,13 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
       })))
       setIvByRound({ ...position.interviewersByRound })
       setSlackChannelId(position.slackChannelId ?? '')
+      setSlackChannelName(position.slackChannelName ?? '')
     } else {
       setName('')
       setInterviewTypes([])
       setIvByRound({})
       setSlackChannelId('')
+      setSlackChannelName('')
     }
   }, [open, position])
 
@@ -207,6 +328,7 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
       interviewTypes,
       interviewersByRound: ivByRound,
       slackChannelId: slackChannelId.trim() || undefined,
+      slackChannelName: slackChannelName.trim() || undefined,
     }
 
     try {
@@ -243,17 +365,21 @@ export default function PositionModal({ open, onOpenChange, position }: Props) {
             />
           </div>
 
-          {/* 슬랙 채널 ID */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="slackChannelId">슬랙 채널 ID <span className="text-muted-foreground font-normal">(선택)</span></Label>
-            <Input
-              id="slackChannelId"
-              value={slackChannelId}
-              onChange={(e) => setSlackChannelId(e.target.value)}
-              placeholder="예: C0123456789"
-            />
-            <p className="text-xs text-muted-foreground">면접관 2명 이상 시 DM 대신 이 채널로 발송됩니다. 슬랙 채널 우클릭 → Copy link에서 확인하세요.</p>
-          </div>
+          <SlackChannelSelect
+            selectedId={slackChannelId}
+            selectedName={slackChannelName}
+            channels={slackChannels.data?.channels ?? []}
+            isLoading={slackChannels.isLoading}
+            error={slackChannels.error}
+            onSelect={(channel) => {
+              setSlackChannelId(channel.id)
+              setSlackChannelName(channel.name)
+            }}
+            onClear={() => {
+              setSlackChannelId('')
+              setSlackChannelName('')
+            }}
+          />
 
           {/* 인터뷰 유형 */}
           <div className="flex flex-col gap-2">
