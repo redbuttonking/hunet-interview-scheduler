@@ -16,6 +16,7 @@ function toInterviewer(id: string, data: Record<string, unknown>): Interviewer {
     id,
     name: data.name as string,
     slackId: data.slackId as string,
+    email: (data.email as string | undefined) ?? undefined,
     createdAt: (data.createdAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
     updatedAt: (data.updatedAt as { toDate(): Date } | null)?.toDate() ?? new Date(),
   }

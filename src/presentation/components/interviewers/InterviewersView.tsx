@@ -74,8 +74,9 @@ export default function InterviewersView() {
       {/* 카드 컨테이너 */}
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         {/* 테이블 헤더 — 데스크탑만 표시 */}
-        <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_auto] px-5 py-3 border-b border-border bg-muted/40">
+        <div className="hidden sm:grid grid-cols-[1fr_1.2fr_1fr_1fr_auto] px-5 py-3 border-b border-border bg-muted/40">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">이름</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">이메일</span>
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">슬랙 ID</span>
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">소속 포지션</span>
           <span className="w-16" />
@@ -116,6 +117,7 @@ export default function InterviewersView() {
                   <div className="flex sm:hidden items-start justify-between px-4 py-3.5 gap-3">
                     <div className="flex-1 min-w-0 flex flex-col gap-1">
                       <span className="text-sm font-medium text-foreground">{iv.name}</span>
+                      {iv.email && <span className="text-xs text-muted-foreground truncate">{iv.email}</span>}
                       <span className="text-xs text-muted-foreground font-mono">@{iv.slackId}</span>
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         {positionNames.length > 0 ? (
@@ -152,8 +154,9 @@ export default function InterviewersView() {
                   </div>
 
                   {/* 데스크탑 레이아웃 */}
-                  <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_auto] items-center px-5 py-4">
+                  <div className="hidden sm:grid grid-cols-[1fr_1.2fr_1fr_1fr_auto] items-center px-5 py-4">
                     <span className="text-sm font-medium text-foreground">{iv.name}</span>
+                    <span className="text-sm text-muted-foreground truncate">{iv.email ?? '-'}</span>
                     <span className="text-sm text-muted-foreground font-mono">@{iv.slackId}</span>
                     <div className="flex flex-wrap gap-1">
                       {positionNames.length > 0 ? (
