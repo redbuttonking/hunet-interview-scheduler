@@ -1,7 +1,7 @@
 'use client'
 
 // 면접관 가능 시간을 직접 입력해 조율 중 또는 확정 인터뷰를 등록하는 모달
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { CalendarCheck, CheckCircle2, Clock, Plus, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -38,6 +38,7 @@ interface Props {
 interface ManualRow {
   id: string
   name: string
+  round: Round | ''
   date: string
   startTime: string
   endTime: string
@@ -49,6 +50,7 @@ interface ManualScheduleData {
   startDate: string
   endDate: string
   ids: string[]
+  interviewersByRound: Partial<Record<Round, string[]>>
 }
 
 type ErrorKeys = 'candidateName' | 'position' | 'type' | 'manualRows' | 'schedule'
@@ -58,6 +60,7 @@ function createRow(): ManualRow {
   return {
     id: Math.random().toString(36).slice(2),
     name: '',
+    round: '',
     date: '',
     startTime: '10:00',
     endTime: '11:00',
@@ -70,21 +73,34 @@ function formatDate(dateStr: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}(${days[d.getDay()]})`
 }
 
-function buildManualData(rows: ManualRow[]): ManualScheduleData | null {
+function buildManualData(rows: ManualRow[], allowedRounds: Round[]): ManualScheduleData | null {
   if (rows.length === 0) return null
-  if (rows.some((row) => !row.name.trim() || !row.date || row.startTime >= row.endTime)) return null
+  if (rows.some((row) =>
+    !row.name.trim() ||
+    !row.round ||
+    !allowedRounds.includes(row.round) ||
+    !row.date ||
+    row.startTime >= row.endTime,
+  )) return null
 
   const byName = new Map<string, ManualInterviewer>()
+  const interviewersByRound: Partial<Record<Round, string[]>> = {}
   rows.forEach((row) => {
+    const round = row.round as Round
     const name = row.name.trim()
     if (!byName.has(name)) {
       byName.set(name, { id: `manual-${byName.size + 1}`, name, slots: [] })
     }
-    byName.get(name)!.slots.push({
+    const interviewer = byName.get(name)!
+    interviewer.slots.push({
       date: row.date,
       startTime: row.startTime,
       endTime: row.endTime,
     })
+    if (!interviewersByRound[round]) interviewersByRound[round] = []
+    if (!interviewersByRound[round]!.includes(interviewer.id)) {
+      interviewersByRound[round]!.push(interviewer.id)
+    }
   })
 
   const interviewers = [...byName.values()]
@@ -101,7 +117,17 @@ function buildManualData(rows: ManualRow[]): ManualScheduleData | null {
     startDate: dates[0],
     endDate: dates[dates.length - 1],
     ids: interviewers.map((interviewer) => interviewer.id),
+    interviewersByRound,
   }
+}
+
+function buildSessionSpecs(
+  sessions: { rounds: Round[] }[],
+  interviewersByRound: Partial<Record<Round, string[]>>,
+): { interviewerIds: string[] }[] {
+  return sessions.map((session) => ({
+    interviewerIds: [...new Set(session.rounds.flatMap((round) => interviewersByRound[round] ?? []))],
+  }))
 }
 
 function toOption(schedule: RecommendedSchedule) {
@@ -133,7 +159,10 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
 
   const selectedPosition = positions.find((p) => p.id === positionId) ?? null
   const selectedType = selectedTypeIdx !== null ? selectedPosition?.interviewTypes[selectedTypeIdx] ?? null : null
-  const manualData = useMemo(() => buildManualData(manualRows), [manualRows])
+  const usedRounds = selectedType
+    ? ([...new Set(selectedType.sessions.flatMap((session) => session.rounds))] as Round[])
+    : []
+  const manualData = buildManualData(manualRows, usedRounds)
 
   const { data: reservations = [], isLoading: isLoadingReservations } = useRoomReservations(
     manualData?.startDate ?? '',
@@ -142,7 +171,7 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
 
   const schedules = selectedType && manualData
     ? recommendSchedules(
-      selectedType.sessions.map(() => ({ interviewerIds: manualData.ids })),
+      buildSessionSpecs(selectedType.sessions, manualData.interviewersByRound),
       manualData.availabilities,
       reservations,
     ).sort((a, b) => (a.date + a.slots[0].startTime).localeCompare(b.date + b.slots[0].startTime))
@@ -185,7 +214,13 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
     if (!candidateName.trim()) newErrors.candidateName = '후보자명을 입력해주세요.'
     if (!positionId || !selectedPosition) newErrors.position = '포지션을 선택해주세요.'
     if (selectedTypeIdx === null || !selectedType) newErrors.type = '인터뷰 유형을 선택해주세요.'
-    if (!manualData) newErrors.manualRows = '면접관명, 날짜, 시작/종료 시간을 모두 올바르게 입력해주세요.'
+    if (!manualData) newErrors.manualRows = '담당 차수, 면접관명, 날짜, 시작/종료 시간을 모두 올바르게 입력해주세요.'
+    if (selectedType && manualData) {
+      const emptyRounds = usedRounds.filter((round) => (manualData.interviewersByRound[round] ?? []).length === 0)
+      if (emptyRounds.length > 0) {
+        newErrors.manualRows = `담당 면접관이 없는 차수가 있습니다: ${emptyRounds.join(', ')}`
+      }
+    }
     if (selectedScheduleIdx === null) newErrors.schedule = '추천 일정 중 하나를 선택해주세요.'
 
     if (Object.keys(newErrors).length > 0) {
@@ -205,12 +240,6 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
       return
     }
 
-    const usedRounds = [...new Set(selectedType.sessions.flatMap((session) => session.rounds))] as Round[]
-    const interviewersByRound: Partial<Record<Round, string[]>> = {}
-    usedRounds.forEach((round) => {
-      interviewersByRound[round] = data.ids
-    })
-
     try {
       const interview = await createInterview.mutateAsync({
         candidateName: candidateName.trim(),
@@ -220,7 +249,7 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
         sessions: selectedType.sessions,
         interviewerIds: data.ids,
         manualInterviewers: data.interviewers,
-        interviewersByRound,
+        interviewersByRound: data.interviewersByRound,
         availabilityPeriod: { startDate: data.startDate, endDate: data.endDate },
         availabilities: data.availabilities,
         status: 'ready_to_schedule',
@@ -347,8 +376,25 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
               {manualRows.map((row) => (
                 <div
                   key={row.id}
-                  className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1.45fr_auto] gap-2 lg:gap-3 items-end rounded-lg border border-border bg-muted/20 p-3"
+                  className="grid grid-cols-1 lg:grid-cols-[0.8fr_1fr_1fr_1.45fr_auto] gap-2 lg:gap-3 items-end rounded-lg border border-border bg-muted/20 p-3"
                 >
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">담당 차수</Label>
+                    <Select
+                      value={row.round}
+                      onValueChange={(v) => v && updateRow(row.id, { round: v as Round })}
+                      disabled={usedRounds.length === 0}
+                    >
+                      <SelectTrigger className="w-full bg-background">
+                        <SelectValue placeholder="차수" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {usedRounds.map((round) => (
+                          <SelectItem key={round} value={round} label={round}>{round}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">면접관</Label>
                     <Input
@@ -412,7 +458,7 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              같은 면접관이 여러 시간대에 가능하면 같은 이름으로 행을 추가하세요.
+              원데이 인터뷰는 세션 순서에 맞춰 각 차수 면접관의 가능 시간이 연속되는 일정만 추천됩니다.
             </p>
             {errors.manualRows && <p className="text-xs text-destructive">{errors.manualRows}</p>}
           </div>

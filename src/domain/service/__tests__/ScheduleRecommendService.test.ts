@@ -157,6 +157,21 @@ describe('recommendSchedules', () => {
       expect(result[0].slots[1].startTime).toBe('10:00')
     })
 
+    it('세션별 담당 면접관의 가능 시간을 따로 계산한다', () => {
+      const result = recommendSchedules(
+        [{ interviewerIds: ['iv-1'] }, { interviewerIds: ['iv-2'] }],
+        [
+          makeAvailability('iv-1', [{ date: '2026-05-19', startTime: '09:00', endTime: '10:00' }]),
+          makeAvailability('iv-2', [{ date: '2026-05-19', startTime: '10:00', endTime: '11:00' }]),
+        ],
+        [makeReservation({ startTime: '09:00', endTime: '11:00' })],
+      )
+
+      expect(result).toHaveLength(1)
+      expect(result[0].slots[0].startTime).toBe('09:00')
+      expect(result[0].slots[1].startTime).toBe('10:00')
+    })
+
     it('연속 세션이 점심시간에 걸치면 추천하지 않는다', () => {
       const result = recommendSchedules(
         [{ interviewerIds: ['iv-1'] }, { interviewerIds: ['iv-2'] }],
