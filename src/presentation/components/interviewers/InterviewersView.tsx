@@ -60,13 +60,13 @@ export default function InterviewersView() {
       {/* 페이지 헤더 */}
       <div className="flex items-start justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">면접관 관리</h1>
-          <p className="text-sm text-muted-foreground mt-1">면접관을 등록하고 슬랙 ID를 관리합니다.</p>
+          <h1 className="text-2xl font-bold text-foreground">면접관 풀 관리</h1>
+          <p className="text-sm text-muted-foreground mt-1">Slack 임직원 중 인터뷰에 배치할 면접관을 관리합니다.</p>
         </div>
         {!isViewer && (
           <Button onClick={handleAddClick} className="gap-2">
             <Plus size={15} />
-            면접관 추가
+            Slack에서 면접관 추가
           </Button>
         )}
       </div>
@@ -96,10 +96,10 @@ export default function InterviewersView() {
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
               <Users size={22} className="opacity-40" />
             </div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-foreground">등록된 면접관이 없습니다</p>
-              <p className="text-xs mt-1">면접관 추가 버튼을 눌러 등록해주세요.</p>
-            </div>
+          <div className="text-center">
+              <p className="text-sm font-medium text-foreground">등록된 면접관 풀이 없습니다</p>
+              <p className="text-xs mt-1">Slack에서 면접관을 선택해 포지션 배치에 사용할 풀을 만들어주세요.</p>
+          </div>
           </div>
         )}
 
@@ -199,7 +199,7 @@ export default function InterviewersView() {
         {/* 총 인원 표시 */}
         {!isLoading && interviewers.length > 0 && (
           <div className="px-5 py-3 border-t border-border bg-muted/20">
-            <span className="text-xs text-muted-foreground">총 {interviewers.length}명</span>
+            <span className="text-xs text-muted-foreground">면접관 풀 총 {interviewers.length}명</span>
           </div>
         )}
       </div>

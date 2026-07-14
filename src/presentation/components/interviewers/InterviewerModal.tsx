@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Search, X } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -113,7 +113,7 @@ function SlackUserSearch({
         </div>
       )}
       <p className="text-xs text-muted-foreground">
-        Slack 권한 승인 전에는 직접 입력으로 등록할 수 있습니다.
+        Slack에서 선택하면 이름, 멤버 ID, 이메일이 자동 입력됩니다.
       </p>
     </div>
   )
@@ -177,7 +177,10 @@ export default function InterviewerModal({ open, onOpenChange, interviewer }: Pr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{isEdit ? '면접관 편집' : '면접관 추가'}</DialogTitle>
+          <DialogTitle>{isEdit ? '면접관 풀 편집' : 'Slack에서 면접관 추가'}</DialogTitle>
+          <DialogDescription>
+            Slack 임직원 중 인터뷰에 배치할 사람을 선택합니다. 권한 승인 전에는 직접 입력도 가능합니다.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-2">
@@ -191,6 +194,12 @@ export default function InterviewerModal({ open, onOpenChange, interviewer }: Pr
               setEmail(user.email ?? '')
             }}
           />
+
+          <div className="flex items-center gap-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">직접 입력</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">이름</Label>
