@@ -39,11 +39,11 @@ export default function InterviewerModal({ open, onOpenChange, interviewer }: Pr
     const trimmedName = name.trim()
     const trimmedSlack = slackId.trim()
 
-    if (!trimmedName || !trimmedSlack) return
+    if (!trimmedName) return
 
-    const isDuplicate = interviewers.some(
-      (iv) => iv.slackId === trimmedSlack && iv.id !== interviewer?.id,
-    )
+    const isDuplicate = trimmedSlack
+      ? interviewers.some((iv) => iv.slackId === trimmedSlack && iv.id !== interviewer?.id)
+      : false
     if (isDuplicate) {
       toast.error('이미 등록된 슬랙 멤버 ID입니다.')
       return
@@ -89,7 +89,6 @@ export default function InterviewerModal({ open, onOpenChange, interviewer }: Pr
               value={slackId}
               onChange={(e) => setSlackId(e.target.value)}
               placeholder="U0123456789"
-              required
             />
             <p className="text-xs text-muted-foreground">
               Slack 프로필 → 더보기(⋯) → <strong>멤버 ID 복사</strong>에서 확인

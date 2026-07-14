@@ -75,7 +75,7 @@ export default function SlackSendModal({ open, onOpenChange, interview, intervie
       setMessage(template.message)
       setExcludedDates(new Set())
       setSendMode(initialDmIds ? 'dm' : slackChannelId ? 'channel' : 'dm')
-      setSelectedDmIds(new Set(initialDmIds ?? relevantInterviewers.map((iv) => iv.id)))
+      setSelectedDmIds(new Set(initialDmIds ?? relevantInterviewers.filter((iv) => iv.slackId).map((iv) => iv.id)))
     }
   }, [open, template, slackChannelId, relevantInterviewers, initialDmIds])
 

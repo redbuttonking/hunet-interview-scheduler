@@ -108,13 +108,6 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
       }
     }
 
-    const missingSlackNames = interviewers
-      .filter((iv) => interviewerIds.includes(iv.id) && !iv.slackId)
-      .map((iv) => iv.name)
-    if (missingSlackNames.length > 0) {
-      newErrors.interviewers = `슬랙 ID가 없는 면접관이 있습니다: ${missingSlackNames.join(', ')}`
-    }
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       return
