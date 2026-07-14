@@ -131,15 +131,20 @@ export default function ScheduleRecommendModal({ open, onOpenChange, interview }
                       className={cn(
                         'w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-all',
                         selected
-                          ? 'border-primary bg-primary/10 shadow-sm'
-                          : 'border-border hover:border-primary/40 hover:bg-muted/30',
+                          ? 'border-foreground bg-muted/70 shadow-sm ring-1 ring-foreground/10'
+                          : 'border-border hover:border-foreground/30 hover:bg-muted/30',
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <span className={cn('font-semibold', selected ? 'text-foreground' : 'text-foreground')}>
                           {formatDate(schedule.date)}
                         </span>
-                        {selected && <CheckCircle2 size={16} className="text-primary shrink-0" />}
+                        {selected && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 text-xs font-medium text-foreground ring-1 ring-border">
+                            <CheckCircle2 size={13} className="shrink-0" />
+                            선택됨
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex flex-col gap-0.5 mt-1">
