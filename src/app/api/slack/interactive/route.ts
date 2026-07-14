@@ -316,7 +316,7 @@ async function notifyRecruiters(
 
   const candidateName = interviewData.candidateName as string
   const positionName = interviewData.positionName as string
-  const message = `✅ *${candidateName}* (${positionName}) 면접관 전원이 가용 일정을 제출했습니다.\n일정 조율 페이지에서 확인해주세요.`
+  const message = `✅ *${candidateName}* (${positionName}) 면접관 전원이 가용 일정을 제출했습니다.\n일정 변동이 있으시다면 담당자에게 문의 주시기 바랍니다.`
 
   await Promise.allSettled(
     recipientsSnap.docs.map((doc) =>
