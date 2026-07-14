@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Users } from 'lucide-react'
+import { Plus, Pencil, Trash2, Users, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
   Dialog, DialogContent, DialogHeader,
   DialogTitle, DialogDescription,
@@ -24,6 +25,11 @@ export default function InterviewersView() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Interviewer | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Interviewer | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredInterviewers = interviewers.filter((iv) =>
+    iv.name.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+  )
 
   function getPositionNames(interviewerId: string): string[] {
     return positions
@@ -71,6 +77,18 @@ export default function InterviewersView() {
         )}
       </div>
 
+      {interviewers.length > 0 && (
+        <div className="relative mb-3">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="면접관 이름으로 검색"
+            className="pl-9"
+          />
+        </div>
+      )}
+
       {/* 카드 컨테이너 */}
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         {/* 테이블 헤더 — 데스크탑만 표시 */}
@@ -103,10 +121,23 @@ export default function InterviewersView() {
           </div>
         )}
 
+        {/* 검색 결과 없음 */}
+        {!isLoading && interviewers.length > 0 && filteredInterviewers.length === 0 && (
+          <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+              <Search size={22} className="opacity-40" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-foreground">검색된 면접관이 없습니다</p>
+              <p className="text-xs mt-1">이름에 포함된 글자로 다시 검색해주세요.</p>
+            </div>
+          </div>
+        )}
+
         {/* 목록 */}
-        {!isLoading && interviewers.length > 0 && (
+        {!isLoading && filteredInterviewers.length > 0 && (
           <div className="divide-y divide-border">
-            {interviewers.map((iv) => {
+            {filteredInterviewers.map((iv) => {
               const positionNames = getPositionNames(iv.id)
               return (
                 <div
@@ -199,7 +230,11 @@ export default function InterviewersView() {
         {/* 총 인원 표시 */}
         {!isLoading && interviewers.length > 0 && (
           <div className="px-5 py-3 border-t border-border bg-muted/20">
-            <span className="text-xs text-muted-foreground">면접관 풀 총 {interviewers.length}명</span>
+            <span className="text-xs text-muted-foreground">
+              {searchQuery.trim()
+                ? `검색 결과 ${filteredInterviewers.length}명 · 전체 ${interviewers.length}명`
+                : `면접관 풀 총 ${interviewers.length}명`}
+            </span>
           </div>
         )}
       </div>

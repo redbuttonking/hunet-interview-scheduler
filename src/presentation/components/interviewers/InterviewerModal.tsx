@@ -65,8 +65,11 @@ function SlackUserSearch({
         <Input
           id="slackUserSearch"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setFocused(true)}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setFocused(true)
+          }}
+          onClick={() => setFocused(true)}
           placeholder={isLoading ? 'Slack 사용자를 불러오는 중입니다.' : '이름, 이메일, Slack ID로 검색'}
           className="pl-9"
           disabled={isLoading}
