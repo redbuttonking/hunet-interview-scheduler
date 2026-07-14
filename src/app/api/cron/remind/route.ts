@@ -59,30 +59,50 @@ export async function GET(req: NextRequest) {
     const missingIds = allIds.filter((id) => !submittedIds.has(id))
     if (missingIds.length === 0) continue
 
-    // 포지션의 슬랙 채널 조회
-    const positionSnap = await db.collection(COLLECTIONS.POSITIONS).doc(interview.positionId).get()
-    const slackChannelId = positionSnap.data()?.slackChannelId as string | undefined
-    if (!slackChannelId) continue
-
-    // 미제출 면접관 @멘션 문자열 생성
-    const interviewerSnaps = await Promise.all(
-      missingIds.map((id) => db.collection(COLLECTIONS.INTERVIEWERS).doc(id).get()),
-    )
-    const mentions = interviewerSnaps
-      .filter((s) => s.exists && s.data()?.slackId)
-      .map((s) => `<@${s.data()!.slackId as string}>`)
-      .join(' ')
-    if (!mentions) continue
-
     const message = rawMessage
       .replace('{후보자명}', interview.candidateName as string)
       .replace('{포지션명}', interview.positionName as string)
 
+    const sendMode = interview.slackSendMode as 'channel' | 'dm' | undefined
+    const slackTargetIds = (interview.slackTargetIds as string[] | undefined) ?? []
+
+    // 미제출 면접관 Slack ID 조회
+    const interviewerSnaps = await Promise.all(
+      missingIds.map((id) => db.collection(COLLECTIONS.INTERVIEWERS).doc(id).get()),
+    )
+    const missingSlackIds = interviewerSnaps
+      .filter((s) => s.exists && s.data()?.slackId)
+      .map((s) => s.data()!.slackId as string)
+    if (missingSlackIds.length === 0) continue
+
     try {
-      await slack.chat.postMessage({
-        channel: slackChannelId,
-        text: `${mentions}\n${message}`,
-      })
+      if (sendMode === 'dm') {
+        const targetSlackIds = slackTargetIds.length > 0
+          ? missingSlackIds.filter((id) => slackTargetIds.includes(id))
+          : missingSlackIds
+        if (targetSlackIds.length === 0) continue
+
+        await Promise.all(
+          targetSlackIds.map((slackId) =>
+            slack.chat.postMessage({
+              channel: slackId,
+              text: message,
+            }),
+          ),
+        )
+      } else {
+        const positionSnap = await db.collection(COLLECTIONS.POSITIONS).doc(interview.positionId).get()
+        const fallbackChannelId = positionSnap.data()?.slackChannelId as string | undefined
+        const slackChannelId = slackTargetIds[0] ?? fallbackChannelId
+        if (!slackChannelId) continue
+
+        const mentions = missingSlackIds.map((id) => `<@${id}>`).join(' ')
+        await slack.chat.postMessage({
+          channel: slackChannelId,
+          text: `${mentions}\n${message}`,
+        })
+      }
+
       await doc.ref.update({ reminderSentAt: FieldValue.serverTimestamp() })
       reminded++
     } catch (e) {

@@ -146,7 +146,7 @@ export default function SchedulingView() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error ?? '발송 실패')
-      toast.success('리마인드 메시지를 채널에 발송했습니다.')
+      toast.success('리마인드 메시지를 발송했습니다.')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : '발송 중 오류가 발생했습니다.')
     } finally {
@@ -631,7 +631,7 @@ export default function SchedulingView() {
               <span className="font-semibold text-foreground">
                 {getInterviewer(resendConfirm?.interviewerId ?? '')?.name}
               </span>
-              님에게 채널에서 리마인드 메시지를 발송하시겠습니까?
+              님에게 리마인드 메시지를 발송하시겠습니까?
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-2">

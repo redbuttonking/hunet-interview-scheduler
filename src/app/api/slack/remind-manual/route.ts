@@ -1,4 +1,4 @@
-// 특정 면접관에게 리마인드 메시지를 채널에 수동 발송
+// 특정 면접관에게 리마인드 메시지를 기존 조율 발송 방식에 맞춰 수동 발송
 import { NextRequest, NextResponse } from 'next/server'
 import { WebClient } from '@slack/web-api'
 import { adminAuth, adminDb } from '@/infrastructure/firebase/adminConfig'
@@ -55,22 +55,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '면접관의 슬랙 ID가 없습니다.' }, { status: 400 })
   }
 
-  const positionSnap = await db.collection(COLLECTIONS.POSITIONS).doc(interview.positionId).get()
-  const slackChannelId = positionSnap.data()?.slackChannelId as string | undefined
-
-  if (!slackChannelId) {
-    return NextResponse.json({ error: '포지션에 슬랙 채널이 설정되어 있지 않습니다.' }, { status: 400 })
-  }
-
   const rawMessage = (templateSnap.data()?.message as string | undefined) ?? DEFAULT_REMINDER_MESSAGE
   const message = rawMessage
     .replace('{후보자명}', interview.candidateName as string)
     .replace('{포지션명}', interview.positionName as string)
 
-  await slack.chat.postMessage({
-    channel: slackChannelId,
-    text: `<@${slackId}>\n${message}`,
-  })
+  const sendMode = interview.slackSendMode as 'channel' | 'dm' | undefined
+
+  if (sendMode === 'dm') {
+    await slack.chat.postMessage({
+      channel: slackId,
+      text: message,
+    })
+  } else {
+    const slackTargetIds = (interview.slackTargetIds as string[] | undefined) ?? []
+    const positionSnap = await db.collection(COLLECTIONS.POSITIONS).doc(interview.positionId).get()
+    const fallbackChannelId = positionSnap.data()?.slackChannelId as string | undefined
+    const slackChannelId = slackTargetIds[0] ?? fallbackChannelId
+
+    if (!slackChannelId) {
+      return NextResponse.json({ error: '포지션에 슬랙 채널이 설정되어 있지 않습니다.' }, { status: 400 })
+    }
+
+    await slack.chat.postMessage({
+      channel: slackChannelId,
+      text: `<@${slackId}>\n${message}`,
+    })
+  }
 
   return NextResponse.json({ ok: true })
 }
