@@ -130,6 +130,10 @@ function buildSessionSpecs(
   }))
 }
 
+function getUsedRounds(sessions: { rounds: Round[] }[]): Round[] {
+  return [...new Set(sessions.flatMap((session) => session.rounds))] as Round[]
+}
+
 function toOption(schedule: RecommendedSchedule) {
   return {
     date: schedule.date,
@@ -159,9 +163,7 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
 
   const selectedPosition = positions.find((p) => p.id === positionId) ?? null
   const selectedType = selectedTypeIdx !== null ? selectedPosition?.interviewTypes[selectedTypeIdx] ?? null : null
-  const usedRounds = selectedType
-    ? ([...new Set(selectedType.sessions.flatMap((session) => session.rounds))] as Round[])
-    : []
+  const usedRounds = selectedType ? getUsedRounds(selectedType.sessions) : []
   const manualData = buildManualData(manualRows, usedRounds)
 
   const { data: reservations = [], isLoading: isLoadingReservations } = useRoomReservations(
@@ -207,6 +209,20 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
     setManualRows((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)))
     setSelectedScheduleIdx(null)
     clearError('manualRows')
+  }
+
+  function selectInterviewType(idx: number) {
+    const nextType = selectedPosition?.interviewTypes[idx]
+    const nextRounds = nextType ? getUsedRounds(nextType.sessions) : []
+
+    setSelectedTypeIdx(idx)
+    setSelectedScheduleIdx(null)
+    setManualRows((prev) =>
+      prev.map((row) => (row.round && !nextRounds.includes(row.round) ? { ...row, round: '' } : row)),
+    )
+    clearError('type')
+    clearError('manualRows')
+    clearError('schedule')
   }
 
   function validate(): ManualScheduleData | null {
@@ -343,12 +359,7 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => {
-                      setSelectedTypeIdx(idx)
-                      setSelectedScheduleIdx(null)
-                      clearError('type')
-                      clearError('schedule')
-                    }}
+                    onClick={() => selectInterviewType(idx)}
                     className={cn(
                       'px-4 py-2 rounded-lg border text-sm font-medium transition-colors',
                       selectedTypeIdx === idx
