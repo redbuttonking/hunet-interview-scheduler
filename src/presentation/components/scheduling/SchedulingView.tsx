@@ -164,7 +164,7 @@ export default function SchedulingView() {
           .map((id) => getInterviewer(id)?.slackId)
           .filter((id): id is string => !!id)
         if (slackIds.length > 0) {
-          const message = `[취소 안내] ${deleteTarget.candidateName}님(${deleteTarget.positionName}) 면접 가용 일정 조율이 취소되었습니다. 수고 많으셨습니다.`
+          const message = `[취소 안내] ${deleteTarget.candidateName}님(${deleteTarget.positionName}) 면접 가용 일정 조율이 관리자에 의해 취소되었습니다.`
           await sendCancellationSlack.mutateAsync({ slackIds, message }).catch(() => {
             toast.warning('취소 알림 슬랙 발송에 실패했습니다. 면접관에게 직접 알려주세요.')
           })
