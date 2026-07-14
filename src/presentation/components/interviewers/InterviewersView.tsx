@@ -136,7 +136,7 @@ export default function InterviewersView() {
 
         {/* 목록 */}
         {!isLoading && filteredInterviewers.length > 0 && (
-          <div className="divide-y divide-border">
+          <div className="max-h-[60vh] divide-y divide-border overflow-y-auto">
             {filteredInterviewers.map((iv) => {
               const positionNames = getPositionNames(iv.id)
               return (
