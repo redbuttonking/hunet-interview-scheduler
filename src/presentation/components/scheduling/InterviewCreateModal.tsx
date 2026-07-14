@@ -1,7 +1,7 @@
 'use client'
 
 // 새 인터뷰 조율 건을 생성하는 모달 컴포넌트
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import { addDays, parseISO } from 'date-fns'
 import Holidays from 'date-holidays'
@@ -54,6 +54,24 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
 
   const selectedPosition = positions.find((p) => p.id === positionId) ?? null
   const selectedType = selectedTypeIdx !== null ? selectedPosition?.interviewTypes[selectedTypeIdx] ?? null : null
+  const selectedTypeRounds = useMemo(
+    () => selectedType ? ([...new Set(selectedType.sessions.flatMap((s) => s.rounds))] as Round[]) : [],
+    [selectedType],
+  )
+  const positionInterviewerIds = useMemo(
+    () => selectedPosition
+      ? [...new Set(selectedTypeRounds.flatMap((r) => selectedPosition.interviewersByRound[r] ?? []))]
+      : [],
+    [selectedPosition, selectedTypeRounds],
+  )
+  const availableInterviewers = useMemo(
+    () => interviewers.filter((iv) => positionInterviewerIds.includes(iv.id)),
+    [interviewers, positionInterviewerIds],
+  )
+  const availableInterviewerIds = useMemo(
+    () => availableInterviewers.map((iv) => iv.id),
+    [availableInterviewers],
+  )
 
   useEffect(() => {
     setSelectedTypeIdx(null)
@@ -63,11 +81,9 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
 
   useEffect(() => {
     if (!selectedType || !selectedPosition) return
-    const allRounds = [...new Set(selectedType.sessions.flatMap((s) => s.rounds))] as Round[]
-    const ids = [...new Set(allRounds.flatMap((r) => selectedPosition.interviewersByRound[r] ?? []))]
-    setInterviewerIds(ids)
+    setInterviewerIds(availableInterviewerIds)
     setErrors((p) => ({ ...p, type: undefined, interviewers: undefined }))
-  }, [selectedTypeIdx, selectedPosition, selectedType])
+  }, [selectedTypeIdx, selectedPosition, selectedType, availableInterviewerIds])
 
   function clearError(key: ErrorKeys) {
     setErrors((p) => ({ ...p, [key]: undefined }))
@@ -101,8 +117,9 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
     else if (!hasRequestableDate(startDate, endDate)) newErrors.period = '요청 기간에 선택 가능한 평일(월~목)이 없습니다.'
 
     if (selectedPosition && selectedType) {
-      const usedRounds = [...new Set(selectedType.sessions.flatMap((s) => s.rounds))] as Round[]
-      const missingRounds = usedRounds.filter((round) => (selectedPosition.interviewersByRound[round] ?? []).length === 0)
+      const missingRounds = selectedTypeRounds.filter((round) =>
+        interviewers.filter((iv) => (selectedPosition.interviewersByRound[round] ?? []).includes(iv.id)).length === 0,
+      )
       if (missingRounds.length > 0) {
         newErrors.interviewers = `${missingRounds.join(', ')} 면접관이 포지션에 배치되어 있지 않습니다.`
       }
@@ -200,7 +217,7 @@ export default function InterviewCreateModal({ open, onOpenChange }: Props) {
             <div className="space-y-1.5">
               <Label>면접관</Label>
               <div className="flex flex-wrap gap-1.5">
-                {interviewers.map((iv) => {
+                {availableInterviewers.map((iv) => {
                   const selected = interviewerIds.includes(iv.id)
                   return (
                     <button
