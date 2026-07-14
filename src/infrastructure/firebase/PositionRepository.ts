@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 import { COLLECTIONS } from './collections'
+import { removeUndefinedFields } from './sanitize'
 import { Position, InterviewType, Round } from '@/domain/model/Position'
 import {
   IPositionRepository,
@@ -34,7 +35,7 @@ class PositionFirestoreRepository implements IPositionRepository {
 
   async create(input: CreatePositionInput): Promise<Position> {
     const ref = await addDoc(this.col, {
-      ...input,
+      ...removeUndefinedFields(input),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
@@ -44,7 +45,7 @@ class PositionFirestoreRepository implements IPositionRepository {
 
   async update(id: string, input: UpdatePositionInput): Promise<Position> {
     const ref = doc(db, COLLECTIONS.POSITIONS, id)
-    await updateDoc(ref, { ...input, updatedAt: serverTimestamp() })
+    await updateDoc(ref, { ...removeUndefinedFields(input), updatedAt: serverTimestamp() })
     const snap = await getDoc(ref)
     return toPosition(snap.id, snap.data() as Record<string, unknown>)
   }

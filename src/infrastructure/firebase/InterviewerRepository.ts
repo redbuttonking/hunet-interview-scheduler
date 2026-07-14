@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 import { COLLECTIONS } from './collections'
+import { removeUndefinedFields } from './sanitize'
 import { Interviewer } from '@/domain/model/Interviewer'
 import {
   IInterviewerRepository,
@@ -32,7 +33,7 @@ class InterviewerFirestoreRepository implements IInterviewerRepository {
 
   async create(input: CreateInterviewerInput): Promise<Interviewer> {
     const ref = await addDoc(this.col, {
-      ...input,
+      ...removeUndefinedFields(input),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
@@ -42,7 +43,7 @@ class InterviewerFirestoreRepository implements IInterviewerRepository {
 
   async update(id: string, input: UpdateInterviewerInput): Promise<Interviewer> {
     const ref = doc(db, COLLECTIONS.INTERVIEWERS, id)
-    await updateDoc(ref, { ...input, updatedAt: serverTimestamp() })
+    await updateDoc(ref, { ...removeUndefinedFields(input), updatedAt: serverTimestamp() })
     const snap = await getDoc(ref)
     return toInterviewer(snap.id, snap.data() as Record<string, unknown>)
   }
