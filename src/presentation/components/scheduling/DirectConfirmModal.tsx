@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { DatePickerField } from '@/components/ui/date-picker'
 import { cn } from '@/lib/utils'
 import { usePositions } from '@/application/usecase/position/usePositions'
@@ -38,7 +39,7 @@ interface Props {
 interface ManualRow {
   id: string
   name: string
-  round: Round | ''
+  rounds: Round[]
   date: string
   startTime: string
   endTime: string
@@ -60,7 +61,7 @@ function createRow(): ManualRow {
   return {
     id: Math.random().toString(36).slice(2),
     name: '',
-    round: '',
+    rounds: [],
     date: '',
     startTime: '10:00',
     endTime: '11:00',
@@ -77,8 +78,8 @@ function buildManualData(rows: ManualRow[], allowedRounds: Round[]): ManualSched
   if (rows.length === 0) return null
   if (rows.some((row) =>
     !row.name.trim() ||
-    !row.round ||
-    !allowedRounds.includes(row.round) ||
+    row.rounds.length === 0 ||
+    row.rounds.some((round) => !allowedRounds.includes(round)) ||
     !row.date ||
     row.startTime >= row.endTime,
   )) return null
@@ -86,7 +87,6 @@ function buildManualData(rows: ManualRow[], allowedRounds: Round[]): ManualSched
   const byName = new Map<string, ManualInterviewer>()
   const interviewersByRound: Partial<Record<Round, string[]>> = {}
   rows.forEach((row) => {
-    const round = row.round as Round
     const name = row.name.trim()
     if (!byName.has(name)) {
       byName.set(name, { id: `manual-${byName.size + 1}`, name, slots: [] })
@@ -97,10 +97,12 @@ function buildManualData(rows: ManualRow[], allowedRounds: Round[]): ManualSched
       startTime: row.startTime,
       endTime: row.endTime,
     })
-    if (!interviewersByRound[round]) interviewersByRound[round] = []
-    if (!interviewersByRound[round]!.includes(interviewer.id)) {
-      interviewersByRound[round]!.push(interviewer.id)
-    }
+    row.rounds.forEach((round) => {
+      if (!interviewersByRound[round]) interviewersByRound[round] = []
+      if (!interviewersByRound[round]!.includes(interviewer.id)) {
+        interviewersByRound[round]!.push(interviewer.id)
+      }
+    })
   })
 
   const interviewers = [...byName.values()]
@@ -132,6 +134,10 @@ function buildSessionSpecs(
 
 function getUsedRounds(sessions: { rounds: Round[] }[]): Round[] {
   return [...new Set(sessions.flatMap((session) => session.rounds))] as Round[]
+}
+
+function formatRounds(rounds: Round[]): string {
+  return rounds.length > 0 ? rounds.join(', ') : '차수 선택'
 }
 
 function toOption(schedule: RecommendedSchedule) {
@@ -199,6 +205,21 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
     clearError('schedule')
   }
 
+  function toggleRowRound(id: string, round: Round) {
+    setManualRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== id) return row
+        const rounds = row.rounds.includes(round)
+          ? row.rounds.filter((r) => r !== round)
+          : [...row.rounds, round]
+        return { ...row, rounds: usedRounds.filter((r) => rounds.includes(r)) }
+      }),
+    )
+    setSelectedScheduleIdx(null)
+    clearError('manualRows')
+    clearError('schedule')
+  }
+
   function addRow() {
     setManualRows((prev) => [...prev, createRow()])
     setSelectedScheduleIdx(null)
@@ -218,7 +239,7 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
     setSelectedTypeIdx(idx)
     setSelectedScheduleIdx(null)
     setManualRows((prev) =>
-      prev.map((row) => (row.round && !nextRounds.includes(row.round) ? { ...row, round: '' } : row)),
+      prev.map((row) => ({ ...row, rounds: row.rounds.filter((round) => nextRounds.includes(round)) })),
     )
     clearError('type')
     clearError('manualRows')
@@ -387,84 +408,115 @@ export default function DirectConfirmModal({ open, onOpenChange }: Props) {
               {manualRows.map((row) => (
                 <div
                   key={row.id}
-                  className="grid grid-cols-1 lg:grid-cols-[0.8fr_1fr_1fr_1.45fr_auto] gap-2 lg:gap-3 items-end rounded-lg border border-border bg-muted/20 p-3"
+                  className="rounded-lg border border-border bg-muted/20 p-3"
                 >
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">담당 차수</Label>
-                    <Select
-                      value={row.round}
-                      onValueChange={(v) => v && updateRow(row.id, { round: v as Round })}
-                      disabled={usedRounds.length === 0}
-                    >
-                      <SelectTrigger className="w-full bg-background">
-                        <SelectValue placeholder="차수" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {usedRounds.map((round) => (
-                          <SelectItem key={round} value={round} label={round}>{round}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">면접관</Label>
-                    <Input
-                      value={row.name}
-                      onChange={(e) => updateRow(row.id, { name: e.target.value })}
-                      placeholder="면접관명"
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">가능 날짜</Label>
-                    <DatePickerField
-                      value={row.date}
-                      onChange={(v) => updateRow(row.id, { date: v })}
-                      placeholder="날짜 선택"
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">가능 시간</Label>
-                    <div className="flex items-center rounded-md border border-input bg-background overflow-hidden">
-                      <Select value={row.startTime} onValueChange={(v) => v && updateRow(row.id, { startTime: v })}>
-                        <SelectTrigger className="border-0 rounded-none shadow-none focus:ring-0">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TIME_OPTIONS.filter((time) => time < '18:00').map((time) => (
-                            <SelectItem key={time} value={time} label={time}>{time}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <span className="px-2 text-sm text-muted-foreground bg-muted/60 self-stretch flex items-center border-x border-border">
-                        부터
-                      </span>
-                      <Select value={row.endTime} onValueChange={(v) => v && updateRow(row.id, { endTime: v })}>
-                        <SelectTrigger className="border-0 rounded-none shadow-none focus:ring-0">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TIME_OPTIONS.filter((time) => time > row.startTime).map((time) => (
-                            <SelectItem key={time} value={time} label={time}>{time}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <span className="px-2 text-sm text-muted-foreground bg-muted/60 self-stretch flex items-center border-l border-border">
-                        까지
-                      </span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="grid flex-1 grid-cols-1 gap-3 lg:grid-cols-[1fr_1.1fr_1.1fr_1.7fr]">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">담당 차수</Label>
+                        <Popover>
+                          <PopoverTrigger
+                            type="button"
+                            disabled={usedRounds.length === 0}
+                            className={cn(
+                              'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',
+                              'disabled:cursor-not-allowed disabled:opacity-50',
+                            )}
+                          >
+                            <span className={cn(!row.rounds.length && 'text-muted-foreground')}>
+                              {formatRounds(row.rounds)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">선택</span>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-44 p-1">
+                            {usedRounds.map((round) => {
+                              const checked = row.rounds.includes(round)
+                              return (
+                                <button
+                                  key={round}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    toggleRowRound(row.id, round)
+                                  }}
+                                  className="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+                                >
+                                  <span>{round}</span>
+                                  <span
+                                    className={cn(
+                                      'flex h-4 w-4 items-center justify-center rounded border text-[10px] leading-none',
+                                      checked
+                                        ? 'border-primary bg-primary text-primary-foreground'
+                                        : 'border-border bg-background',
+                                    )}
+                                  >
+                                    {checked ? '✓' : ''}
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">면접관</Label>
+                        <Input
+                          value={row.name}
+                          onChange={(e) => updateRow(row.id, { name: e.target.value })}
+                          placeholder="면접관명"
+                          className="bg-background"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">가능 날짜</Label>
+                        <DatePickerField
+                          value={row.date}
+                          onChange={(v) => updateRow(row.id, { date: v })}
+                          placeholder="날짜 선택"
+                          className="bg-background"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">가능 시간</Label>
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-center rounded-md border border-input bg-background">
+                          <Select value={row.startTime} onValueChange={(v) => v && updateRow(row.id, { startTime: v })}>
+                            <SelectTrigger className="border-0 rounded-r-none shadow-none focus:ring-0">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIME_OPTIONS.filter((time) => time < '18:00').map((time) => (
+                                <SelectItem key={time} value={time} label={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="flex h-full min-w-12 items-center justify-center border-x border-border bg-muted/60 px-2 text-xs text-muted-foreground">
+                            부터
+                          </span>
+                          <Select value={row.endTime} onValueChange={(v) => v && updateRow(row.id, { endTime: v })}>
+                            <SelectTrigger className="border-0 rounded-l-none shadow-none focus:ring-0">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIME_OPTIONS.filter((time) => time > row.startTime).map((time) => (
+                                <SelectItem key={time} value={time} label={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeRow(row.id)}
+                      disabled={manualRows.length === 1}
+                      className="mt-6 shrink-0 text-muted-foreground hover:text-destructive"
+                      aria-label="가능 시간 행 삭제"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeRow(row.id)}
-                    disabled={manualRows.length === 1}
-                    className="justify-self-end lg:justify-self-auto"
-                  >
-                    <Trash2 size={14} />
-                  </Button>
                 </div>
               ))}
             </div>
