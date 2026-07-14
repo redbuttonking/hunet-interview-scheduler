@@ -31,6 +31,13 @@ export interface InterviewerAvailability {
   slots: AvailabilitySlot[]
 }
 
+/** 수동 등록 인터뷰에 입력한 면접관 이름과 가능 시간 */
+export interface ManualInterviewer {
+  id: string
+  name: string
+  slots: AvailabilitySlot[]
+}
+
 export interface Interview {
   id: string
   candidateName: string
@@ -42,6 +49,8 @@ export interface Interview {
   sessions: { rounds: Round[] }[]
   /** 전체 면접관 ID (가용 일정 수집 대상) */
   interviewerIds: string[]
+  /** 면접관 마스터를 쓰지 않는 수동 등록 면접관 목록 */
+  manualInterviewers?: ManualInterviewer[]
   /** 차수별 면접관 (일정 추천 시 세션별 가용성 계산에 사용) */
   interviewersByRound: Partial<Record<Round, string[]>>
   status: InterviewStatus

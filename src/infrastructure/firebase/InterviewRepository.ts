@@ -21,6 +21,7 @@ function toInterview(id: string, data: Record<string, unknown>): Interview {
     typeLabel: (data.typeLabel as string) ?? '',
     sessions: (data.sessions as { rounds: Round[] }[]) ?? [],
     interviewerIds: (data.interviewerIds as string[]) ?? [],
+    manualInterviewers: data.manualInterviewers as Interview['manualInterviewers'],
     interviewersByRound: (data.interviewersByRound as Partial<Record<Round, string[]>>) ?? {},
     status: data.status as Interview['status'],
     availabilityPeriod: (data.availabilityPeriod as Interview['availabilityPeriod']) ?? null,
@@ -52,6 +53,7 @@ class InterviewFirestoreRepository implements IInterviewRepository {
     const now = new Date()
     const status = input.status ?? 'pending_slack'
     const confirmedSlot = input.confirmedSlot ?? null
+    const availabilities = input.availabilities ?? []
     const ref = await addDoc(this.col, {
       candidateName: input.candidateName,
       positionId: input.positionId,
@@ -59,10 +61,11 @@ class InterviewFirestoreRepository implements IInterviewRepository {
       typeLabel: input.typeLabel,
       sessions: input.sessions,
       interviewerIds: input.interviewerIds,
+      manualInterviewers: input.manualInterviewers ?? [],
       interviewersByRound: input.interviewersByRound,
       availabilityPeriod: input.availabilityPeriod,
       status,
-      availabilities: [],
+      availabilities,
       confirmedSlot,
       candidateOptions: null,
       createdAt: serverTimestamp(),
@@ -72,7 +75,8 @@ class InterviewFirestoreRepository implements IInterviewRepository {
       id: ref.id,
       ...input,
       status,
-      availabilities: [],
+      manualInterviewers: input.manualInterviewers ?? [],
+      availabilities,
       candidateOptions: null,
       confirmedSlot,
       createdAt: now,

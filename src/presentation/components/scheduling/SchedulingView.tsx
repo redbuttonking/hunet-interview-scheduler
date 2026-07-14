@@ -211,7 +211,7 @@ export default function SchedulingView() {
             </Button>
             <Button variant="outline" onClick={() => setDirectConfirmOpen(true)} className="gap-2">
               <CheckCircle2 size={15} />
-              확정 등록
+              수동 일정 등록
             </Button>
             <Button onClick={() => setCreateOpen(true)} className="gap-2">
               <Plus size={15} />
@@ -370,6 +370,12 @@ export default function SchedulingView() {
                 {period && (
                   <p className="text-xs text-muted-foreground mt-2">
                     요청 기간: {period.startDate} ~ {period.endDate}
+                  </p>
+                )}
+
+                {interview.manualInterviewers && interview.manualInterviewers.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    수동 입력 면접관: {interview.manualInterviewers.map((iv) => iv.name).join(', ')}
                   </p>
                 )}
 

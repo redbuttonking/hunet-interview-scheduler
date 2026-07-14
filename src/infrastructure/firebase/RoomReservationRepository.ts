@@ -38,6 +38,22 @@ function toReservation(id: string, data: Record<string, unknown>): RoomReservati
   }
 }
 
+function assertReservableBlock(
+  data: Record<string, unknown>,
+  ranges: { startTime: string; endTime: string }[],
+  id: string,
+): void {
+  if (data.status !== 'reserved' || data.interviewId != null) {
+    throw new Error(`이미 사용 중인 예약입니다: ${id}`)
+  }
+  const blockStart = data.startTime as string
+  const blockEnd = data.endTime as string
+  const invalid = ranges.some((range) => range.startTime < blockStart || range.endTime > blockEnd || range.startTime >= range.endTime)
+  if (invalid) {
+    throw new Error(`예약 가능한 시간 범위를 벗어났습니다: ${id}`)
+  }
+}
+
 export const roomReservationRepository: IRoomReservationRepository = {
   async findByDateRange(startDate: string, endDate: string): Promise<RoomReservation[]> {
     const q = query(
@@ -124,6 +140,11 @@ export const roomReservationRepository: IRoomReservationRepository = {
 
         const confirmedRanges = blockMap.get(blockIds[i])!
           .sort((a, b) => a.confirmedStart.localeCompare(b.confirmedStart))
+        assertReservableBlock(
+          d,
+          confirmedRanges.map((range) => ({ startTime: range.confirmedStart, endTime: range.confirmedEnd })),
+          blockIds[i],
+        )
 
         let prevEnd = blockStart
         let firstRange = true
@@ -204,6 +225,7 @@ export const roomReservationRepository: IRoomReservationRepository = {
 
         const coordRanges = blockMap.get(blockId)!
           .sort((a, b) => a.startTime.localeCompare(b.startTime))
+        assertReservableBlock(d, coordRanges, blockId)
 
         let prevEnd = blockStart
         let firstRange = true

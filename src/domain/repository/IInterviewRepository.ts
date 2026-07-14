@@ -1,4 +1,4 @@
-import { Interview, InterviewStatus, InterviewerAvailability, CandidateOption } from '../model/Interview'
+import { Interview, InterviewStatus, InterviewerAvailability, CandidateOption, ManualInterviewer } from '../model/Interview'
 import { Round } from '../model/Position'
 
 export interface CreateInterviewInput {
@@ -12,6 +12,10 @@ export interface CreateInterviewInput {
   availabilityPeriod: { startDate: string; endDate: string } | null
   /** 직접 확정 등록 시 사용 — 기본값: 'pending_slack' */
   status?: InterviewStatus
+  /** 수동 일정 등록 시 사용하는 면접관 텍스트 목록 */
+  manualInterviewers?: ManualInterviewer[]
+  /** 수동 일정 등록 시 생성 시점에 저장하는 가용 일정 */
+  availabilities?: InterviewerAvailability[]
   confirmedSlot?: Interview['confirmedSlot']
 }
 
@@ -23,6 +27,7 @@ export interface UpdateInterviewInput {
   sessions?: { rounds: Round[] }[]
   status?: InterviewStatus
   interviewerIds?: string[]
+  manualInterviewers?: ManualInterviewer[]
   interviewersByRound?: Partial<Record<Round, string[]>>
   availabilityPeriod?: { startDate: string; endDate: string } | null
   availabilities?: InterviewerAvailability[]
