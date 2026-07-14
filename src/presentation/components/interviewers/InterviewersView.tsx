@@ -60,8 +60,8 @@ export default function InterviewersView() {
       {/* 페이지 헤더 */}
       <div className="flex items-start justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">면접관 풀 관리</h1>
-          <p className="text-sm text-muted-foreground mt-1">Slack 임직원 중 인터뷰에 배치할 면접관을 관리합니다.</p>
+          <h1 className="text-2xl font-bold text-foreground">면접관 관리</h1>
+          <p className="text-sm text-muted-foreground mt-1">&nbsp;</p>
         </div>
         {!isViewer && (
           <Button onClick={handleAddClick} className="gap-2">
