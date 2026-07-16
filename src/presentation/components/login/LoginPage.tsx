@@ -9,7 +9,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export default function LoginPage() {
+/** 로그인 후 이동할 내부 경로를 반환한다 */
+function getReturnPath(value: string | null): string {
+  return value?.startsWith('/') && !value.startsWith('//') ? value : '/dashboard'
+}
+
+export default function LoginPage({ returnTo }: { returnTo: string | null }) {
   const { user, loading, signIn } = useAuthContext()
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -17,8 +22,8 @@ export default function LoginPage() {
   const [pending, setPending] = useState(false)
 
   useEffect(() => {
-    if (!loading && user) router.replace('/dashboard')
-  }, [user, loading, router])
+    if (!loading && user) router.replace(getReturnPath(returnTo))
+  }, [user, loading, router, returnTo])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

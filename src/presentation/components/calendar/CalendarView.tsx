@@ -17,6 +17,7 @@ import { hasTimeOverlap } from '@/lib/reservationUtils'
 import WeekView from './WeekView'
 import DayView from './DayView'
 import ReservationModal from './ReservationModal'
+import BookmarkSetupDialog from '../roomBookmark/BookmarkSetupDialog'
 
 type ViewMode = 'week' | 'day'
 
@@ -152,11 +153,14 @@ export default function CalendarView() {
     /* 1000px 이하에서 가로 스크롤, 얇은 스크롤바 적용 */
     <div className="calendar-scroll">
       <div className="flex flex-col gap-4 min-w-[1000px]">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">캘린더</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            회의실 예약 현황을 확인하고 관리합니다.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">캘린더</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              회의실 예약 현황을 확인하고 관리합니다.
+            </p>
+          </div>
+          <BookmarkSetupDialog />
         </div>
 
         {mode === 'week' ? (

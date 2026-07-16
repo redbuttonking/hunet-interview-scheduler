@@ -11,7 +11,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const handleClose = useCallback(() => setSidebarOpen(false), [])
   const pathname = usePathname()
 
-  if (pathname === '/login') return <>{children}</>
+  if (pathname === '/login' || pathname === '/bookmark-import') return <>{children}</>
 
   return (
     <AuthGuard>
