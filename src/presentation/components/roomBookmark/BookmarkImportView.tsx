@@ -46,9 +46,14 @@ function getIncomingPayload(event: MessageEvent<unknown>): RoomBookmarkPayload |
   return parseRoomBookmarkPayload(message.payload)
 }
 
-/** 북마크 동작에 맞는 확인 제목을 반환한다 */
-function getActionTitle(action: RoomBookmarkPayload['action']): string {
-  return action === 'create' ? '회의실 예약 등록' : action === 'update' ? '회의실 예약 변경' : '회의실 예약 취소'
+/** 북마크 동작에 맞는 목록 표시 이름을 반환한다 */
+function getActionLabel(action: RoomBookmarkPayload['action']): string {
+  return action === 'create' ? '예약 등록' : action === 'update' ? '예약 변경' : '예약 취소'
+}
+
+/** 북마크 동작에 맞는 개별 실행 버튼 이름을 반환한다 */
+function getActionButtonLabel(action: RoomBookmarkPayload['action']): string {
+  return action === 'cancel' ? '예약 삭제' : '예약 반영'
 }
 
 /** 북마크 예약 가져오기 화면을 표시한다 */
@@ -93,8 +98,7 @@ export default function BookmarkImportView() {
   }, [loading, user, payload, router])
 
   /** 확인한 북마크 예약을 시스템에 저장한다 */
-  async function handleConfirm() {
-    if (!payload) return
+  async function handleConfirm(payload: RoomBookmarkPayload) {
     try {
       await importReservation.mutateAsync(payload)
       const payloadKey = getRoomBookmarkPayloadKey(payload)
@@ -181,35 +185,44 @@ export default function BookmarkImportView() {
     )
   }
 
-  const isCancel = payload.action === 'cancel'
   const errorMessage = importReservation.error instanceof Error ? importReservation.error.message : null
-  const waitingCount = pendingPayloads.length - 1
   const isSaving = importReservation.isPending || isBatching
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <section className="w-full max-w-md rounded-lg border bg-background p-6 shadow-sm">
-        <h1 className="text-lg font-semibold">{getActionTitle(payload.action)}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {isCancel ? '우리 시스템에서도 이 회의실 예약을 삭제할까요?' : '우리 시스템에 이 회의실 예약을 반영할까요?'}
-        </p>
-        {waitingCount > 0 && <p className="mt-2 text-sm text-primary">대기 중인 예약이 {waitingCount}건 있습니다.</p>}
-        <dl className="mt-5 space-y-3 rounded-md border bg-muted/30 p-4 text-sm">
-          <div className="flex items-center gap-2"><DoorOpen size={16} className="text-muted-foreground" /><dt className="sr-only">회의실</dt><dd>{payload.roomName}</dd></div>
-          {!isCancel && <div className="flex items-center gap-2"><CalendarDays size={16} className="text-muted-foreground" /><dt className="sr-only">날짜</dt><dd>{payload.date}</dd></div>}
-          {!isCancel && <div className="flex items-center gap-2"><Clock3 size={16} className="text-muted-foreground" /><dt className="sr-only">시간</dt><dd>{payload.startTime} ~ {payload.endTime}</dd></div>}
-        </dl>
+        <h1 className="text-lg font-semibold">회의실 예약 반영</h1>
+        <p className="mt-2 text-sm text-muted-foreground">다우오피스에서 감지한 예약 {pendingPayloads.length}건을 확인해 주세요.</p>
+        <div className="mt-5 max-h-[360px] overflow-y-auto rounded-md border">
+          {pendingPayloads.map((item) => {
+            const isCancel = item.action === 'cancel'
+            return (
+              <article key={getRoomBookmarkPayloadKey(item)} className="border-b p-4 last:border-b-0">
+                <div className="flex items-start justify-between gap-3">
+                  <span className={isCancel ? 'rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive' : 'rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'}>
+                    {getActionLabel(item.action)}
+                  </span>
+                  <Button size="sm" onClick={() => handleConfirm(item)} disabled={isSaving}>
+                    {isSaving ? '반영 중...' : getActionButtonLabel(item.action)}
+                  </Button>
+                </div>
+                <dl className="mt-3 space-y-2 text-sm">
+                  <div className="flex items-center gap-2"><DoorOpen size={16} className="text-muted-foreground" /><dt className="sr-only">회의실</dt><dd>{item.roomName}</dd></div>
+                  {!isCancel && <div className="flex items-center gap-2"><CalendarDays size={16} className="text-muted-foreground" /><dt className="sr-only">날짜</dt><dd>{item.date}</dd></div>}
+                  {!isCancel && <div className="flex items-center gap-2"><Clock3 size={16} className="text-muted-foreground" /><dt className="sr-only">시간</dt><dd>{item.startTime} ~ {item.endTime}</dd></div>}
+                </dl>
+              </article>
+            )
+          })}
+        </div>
         {errorMessage && <p className="mt-3 text-sm text-destructive">{errorMessage}</p>}
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="outline" onClick={handleClose} disabled={isSaving}>취소</Button>
-          {waitingCount > 0 && (
+          {pendingPayloads.length > 1 && (
             <Button variant="outline" onClick={handleConfirmAll} disabled={isSaving}>
               {isSaving ? '반영 중...' : `${pendingPayloads.length}건 일괄 반영`}
             </Button>
           )}
-          <Button onClick={handleConfirm} disabled={isSaving}>
-            {isSaving ? '반영 중...' : isCancel ? '예약 삭제' : '예약 반영'}
-          </Button>
         </div>
       </section>
     </main>
