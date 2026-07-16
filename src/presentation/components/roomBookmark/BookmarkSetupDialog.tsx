@@ -1,7 +1,7 @@
 'use client'
 
 // 다우오피스 예약 감지 북마크를 생성하는 설정 대화상자
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bookmark, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -11,13 +11,19 @@ import { createRoomBookmarkletHref } from '@/lib/roomBookmarklet'
 /** 다우오피스 예약 동기화 북마크 설정 대화상자를 표시한다 */
 export default function BookmarkSetupDialog() {
   const [open, setOpen] = useState(false)
-  const [bookmarkletHref] = useState(() =>
-    typeof window === 'undefined' ? '' : createRoomBookmarkletHref(window.location.origin),
-  )
+  const bookmarkLinkRef = useRef<HTMLAnchorElement>(null)
+
+  /** React 보안 검사 밖에서 북마크 실행 주소를 링크에 설정한다 */
+  useEffect(() => {
+    if (!open) return
+    bookmarkLinkRef.current?.setAttribute('href', createRoomBookmarkletHref(window.location.origin))
+  }, [open])
 
   /** 북마크 코드를 클립보드에 복사한다 */
   async function handleCopy() {
     try {
+      const bookmarkletHref = bookmarkLinkRef.current?.getAttribute('href')
+      if (!bookmarkletHref) throw new Error('북마크 코드를 준비하지 못했습니다.')
       await navigator.clipboard.writeText(bookmarkletHref)
       toast.success('북마크 코드가 복사되었습니다.')
     } catch {
@@ -38,7 +44,7 @@ export default function BookmarkSetupDialog() {
             <DialogDescription>아래 링크를 즐겨찾기 막대로 끌어 놓으세요.</DialogDescription>
           </DialogHeader>
           <a
-            href={bookmarkletHref || undefined}
+            ref={bookmarkLinkRef}
             draggable
             onClick={(event) => event.preventDefault()}
             className="flex h-11 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/5 text-sm font-semibold text-primary hover:bg-primary/10"
@@ -48,7 +54,7 @@ export default function BookmarkSetupDialog() {
           </a>
           <div className="flex items-center justify-between gap-3 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
             <span>다우오피스에서 예약 전에 북마크를 클릭합니다.</span>
-            <Button variant="ghost" size="icon-sm" onClick={handleCopy} disabled={!bookmarkletHref} title="북마크 코드 복사">
+            <Button variant="ghost" size="icon-sm" onClick={handleCopy} title="북마크 코드 복사">
               <Copy size={15} />
               <span className="sr-only">북마크 코드 복사</span>
             </Button>
