@@ -60,6 +60,7 @@ export default function BookmarkImportView() {
     typeof window === 'undefined' ? [] : readStoredPayloads(),
   )
   const [completed, setCompleted] = useState(false)
+  const [isBatching, setIsBatching] = useState(false)
   const payload = pendingPayloads[0] ?? null
 
   /** 다우오피스 창에 예약 정보를 받을 준비가 됐음을 알린다 */
@@ -97,19 +98,44 @@ export default function BookmarkImportView() {
     try {
       await importReservation.mutateAsync(payload)
       const payloadKey = getRoomBookmarkPayloadKey(payload)
-      setPendingPayloads((current) => {
-        const next = current.filter((item) => getRoomBookmarkPayloadKey(item) !== payloadKey)
-        savePendingPayloads(next)
-        return next
-      })
+      removeImportedPayloads(new Set([payloadKey]))
       setCompleted(true)
     } catch {
       // API의 구체적인 오류는 mutation.error로 화면에 표시한다.
     }
   }
 
+  /** 대기열의 예약을 순서대로 저장하고 성공한 항목만 제거한다 */
+  async function handleConfirmAll() {
+    const queued = [...pendingPayloads]
+    const completedKeys = new Set<string>()
+    setIsBatching(true)
+    try {
+      for (const item of queued) {
+        await importReservation.mutateAsync(item)
+        completedKeys.add(getRoomBookmarkPayloadKey(item))
+      }
+      setCompleted(true)
+    } catch {
+      // 실패한 예약과 이후 대기 예약은 사용자가 다시 확인할 수 있도록 남긴다.
+    } finally {
+      removeImportedPayloads(completedKeys)
+      setIsBatching(false)
+    }
+  }
+
+  /** 저장에 성공한 예약을 대기열과 브라우저 저장소에서 제거한다 */
+  function removeImportedPayloads(completedKeys: Set<string>) {
+    setPendingPayloads((current) => {
+      const next = current.filter((item) => !completedKeys.has(getRoomBookmarkPayloadKey(item)))
+      savePendingPayloads(next)
+      return next
+    })
+  }
+
   /** 북마크 팝업 창을 닫는다 */
   function handleClose() {
+    window.opener?.postMessage({ source: MESSAGE_SOURCE, type: 'CLOSED' }, DAOU_ORIGIN)
     window.close()
   }
 
@@ -158,6 +184,7 @@ export default function BookmarkImportView() {
   const isCancel = payload.action === 'cancel'
   const errorMessage = importReservation.error instanceof Error ? importReservation.error.message : null
   const waitingCount = pendingPayloads.length - 1
+  const isSaving = importReservation.isPending || isBatching
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
@@ -174,9 +201,14 @@ export default function BookmarkImportView() {
         </dl>
         {errorMessage && <p className="mt-3 text-sm text-destructive">{errorMessage}</p>}
         <div className="mt-6 flex justify-end gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={importReservation.isPending}>취소</Button>
-          <Button onClick={handleConfirm} disabled={importReservation.isPending}>
-            {importReservation.isPending ? '반영 중...' : isCancel ? '예약 삭제' : '예약 반영'}
+          <Button variant="outline" onClick={handleClose} disabled={isSaving}>취소</Button>
+          {waitingCount > 0 && (
+            <Button variant="outline" onClick={handleConfirmAll} disabled={isSaving}>
+              {isSaving ? '반영 중...' : `${pendingPayloads.length}건 일괄 반영`}
+            </Button>
+          )}
+          <Button onClick={handleConfirm} disabled={isSaving}>
+            {isSaving ? '반영 중...' : isCancel ? '예약 삭제' : '예약 반영'}
           </Button>
         </div>
       </section>
