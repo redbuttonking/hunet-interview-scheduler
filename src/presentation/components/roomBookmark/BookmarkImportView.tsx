@@ -9,19 +9,33 @@ import { Button } from '@/components/ui/button'
 import { useBookmarkRoomImport } from '@/application/usecase/room/useBookmarkRoomImport'
 import { useAuthContext } from '@/presentation/components/auth/AuthProvider'
 import { RoomBookmarkPayload } from '@/domain/model/RoomBookmark'
-import { parseRoomBookmarkPayload } from '@/lib/roomBookmarkPayload'
+import {
+  appendRoomBookmarkPayload,
+  getRoomBookmarkPayloadKey,
+  parseRoomBookmarkPayload,
+} from '@/lib/roomBookmarkPayload'
 
 const DAOU_ORIGIN = 'https://hug.hunet.co.kr'
 const MESSAGE_SOURCE = 'HUNET_ROOM_BOOKMARK'
 const STORAGE_KEY = 'hunet-room-bookmark-payload'
 
-/** 브라우저 저장소에 남은 북마크 예약 정보를 불러온다 */
-function readStoredPayload(): RoomBookmarkPayload | null {
+/** 브라우저 저장소에 남은 북마크 예약 대기열을 불러온다 */
+function readStoredPayloads(): RoomBookmarkPayload[] {
   try {
-    return parseRoomBookmarkPayload(JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? 'null'))
+    const stored = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? 'null')
+    const values = Array.isArray(stored) ? stored : [stored]
+    return values
+      .map((value) => parseRoomBookmarkPayload(value))
+      .filter((value): value is RoomBookmarkPayload => value !== null)
   } catch {
-    return null
+    return []
   }
+}
+
+/** 북마크 예약 대기열을 로그인 이후에도 이어지도록 저장한다 */
+function savePendingPayloads(payloads: RoomBookmarkPayload[]): void {
+  if (payloads.length === 0) sessionStorage.removeItem(STORAGE_KEY)
+  else sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payloads))
 }
 
 /** 다우오피스 북마크 메시지에서 예약 정보를 추출한다 */
@@ -42,10 +56,11 @@ export default function BookmarkImportView() {
   const router = useRouter()
   const { user, loading } = useAuthContext()
   const importReservation = useBookmarkRoomImport()
-  const [payload, setPayload] = useState<RoomBookmarkPayload | null>(() =>
-    typeof window === 'undefined' ? null : readStoredPayload(),
+  const [pendingPayloads, setPendingPayloads] = useState<RoomBookmarkPayload[]>(() =>
+    typeof window === 'undefined' ? [] : readStoredPayloads(),
   )
   const [completed, setCompleted] = useState(false)
+  const payload = pendingPayloads[0] ?? null
 
   /** 다우오피스 창에 예약 정보를 받을 준비가 됐음을 알린다 */
   useEffect(() => {
@@ -60,9 +75,12 @@ export default function BookmarkImportView() {
     const handleMessage = (event: MessageEvent<unknown>) => {
       const incoming = getIncomingPayload(event)
       if (!incoming) return
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(incoming))
       setCompleted(false)
-      setPayload(incoming)
+      setPendingPayloads((current) => {
+        const next = appendRoomBookmarkPayload(current, incoming)
+        savePendingPayloads(next)
+        return next
+      })
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
@@ -78,7 +96,12 @@ export default function BookmarkImportView() {
     if (!payload) return
     try {
       await importReservation.mutateAsync(payload)
-      sessionStorage.removeItem(STORAGE_KEY)
+      const payloadKey = getRoomBookmarkPayloadKey(payload)
+      setPendingPayloads((current) => {
+        const next = current.filter((item) => getRoomBookmarkPayloadKey(item) !== payloadKey)
+        savePendingPayloads(next)
+        return next
+      })
       setCompleted(true)
     } catch {
       // API의 구체적인 오류는 mutation.error로 화면에 표시한다.
@@ -95,6 +118,19 @@ export default function BookmarkImportView() {
   }
 
   if (!payload) {
+    if (completed) {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+          <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-sm">
+            <h1 className="text-lg font-semibold">회의실 예약이 반영되었습니다.</h1>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="outline" onClick={handleClose}>닫기</Button>
+              <Button nativeButton={false} render={<Link href="/calendar" target="_blank" rel="noopener noreferrer" />}>캘린더 확인</Button>
+            </div>
+          </div>
+        </main>
+      )
+    }
     return (
       <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
         <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-sm">
@@ -119,22 +155,9 @@ export default function BookmarkImportView() {
     )
   }
 
-  if (completed) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-        <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-sm">
-          <h1 className="text-lg font-semibold">회의실 예약이 반영되었습니다.</h1>
-          <div className="mt-5 flex justify-end gap-2">
-            <Button variant="outline" onClick={handleClose}>닫기</Button>
-            <Button render={<Link href="/calendar" />}>캘린더 확인</Button>
-          </div>
-        </div>
-      </main>
-    )
-  }
-
   const isCancel = payload.action === 'cancel'
   const errorMessage = importReservation.error instanceof Error ? importReservation.error.message : null
+  const waitingCount = pendingPayloads.length - 1
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
@@ -143,6 +166,7 @@ export default function BookmarkImportView() {
         <p className="mt-2 text-sm text-muted-foreground">
           {isCancel ? '우리 시스템에서도 이 회의실 예약을 삭제할까요?' : '우리 시스템에 이 회의실 예약을 반영할까요?'}
         </p>
+        {waitingCount > 0 && <p className="mt-2 text-sm text-primary">대기 중인 예약이 {waitingCount}건 있습니다.</p>}
         <dl className="mt-5 space-y-3 rounded-md border bg-muted/30 p-4 text-sm">
           <div className="flex items-center gap-2"><DoorOpen size={16} className="text-muted-foreground" /><dt className="sr-only">회의실</dt><dd>{payload.roomName}</dd></div>
           {!isCancel && <div className="flex items-center gap-2"><CalendarDays size={16} className="text-muted-foreground" /><dt className="sr-only">날짜</dt><dd>{payload.date}</dd></div>}

@@ -34,3 +34,18 @@ export function parseRoomBookmarkPayload(value: unknown): RoomBookmarkPayload | 
   if (!isDate(date) || !isTime(startTime) || !isTime(endTime) || startTime >= endTime) return null
   return { action, externalId: normalizedExternalId, roomName: roomName.trim(), date, startTime, endTime } as RoomBookmarkPayload
 }
+
+/** 동일한 예약의 최신 동작을 식별할 수 있는 키를 반환한다 */
+export function getRoomBookmarkPayloadKey(payload: RoomBookmarkPayload): string {
+  return [payload.action, payload.externalId, payload.roomName, payload.date, payload.startTime, payload.endTime].join('|')
+}
+
+/** 새 예약을 대기열에 추가하거나 같은 외부 예약의 최신 정보로 교체한다 */
+export function appendRoomBookmarkPayload(
+  payloads: RoomBookmarkPayload[],
+  incoming: RoomBookmarkPayload,
+): RoomBookmarkPayload[] {
+  const index = payloads.findIndex((payload) => payload.externalId === incoming.externalId)
+  if (index < 0) return [...payloads, incoming]
+  return payloads.map((payload, currentIndex) => currentIndex === index ? incoming : payload)
+}

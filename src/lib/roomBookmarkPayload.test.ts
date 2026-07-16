@@ -1,6 +1,6 @@
 // 다우오피스 북마크 예약 데이터 검증 테스트
 import { describe, expect, it } from 'vitest'
-import { parseRoomBookmarkPayload } from './roomBookmarkPayload'
+import { appendRoomBookmarkPayload, parseRoomBookmarkPayload } from './roomBookmarkPayload'
 
 describe('parseRoomBookmarkPayload', () => {
   it('예약 생성 정보를 반환한다', () => {
@@ -46,5 +46,12 @@ describe('parseRoomBookmarkPayload', () => {
       startTime: '11:00',
       endTime: '10:00',
     })).toBeNull()
+  })
+
+  it('같은 외부 예약의 최신 정보만 대기열에 유지한다', () => {
+    const created = { action: 'create' as const, externalId: 126, roomName: '행복룸', date: '2026-07-16', startTime: '10:00', endTime: '11:00' }
+    const updated = { ...created, action: 'update' as const, startTime: '11:00', endTime: '12:00' }
+
+    expect(appendRoomBookmarkPayload([created], updated)).toEqual([updated])
   })
 })
