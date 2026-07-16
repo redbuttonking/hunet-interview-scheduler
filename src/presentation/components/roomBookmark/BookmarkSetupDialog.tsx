@@ -13,18 +13,29 @@ export default function BookmarkSetupDialog() {
   const [open, setOpen] = useState(false)
   const bookmarkLinkRef = useRef<HTMLAnchorElement>(null)
 
+  /** 현재 시스템 주소를 기준으로 북마크 실행 주소를 반환한다 */
+  function getBookmarkletHref(): string {
+    return createRoomBookmarkletHref(window.location.origin)
+  }
+
   /** React 보안 검사 밖에서 북마크 실행 주소를 링크에 설정한다 */
   useEffect(() => {
     if (!open) return
-    bookmarkLinkRef.current?.setAttribute('href', createRoomBookmarkletHref(window.location.origin))
+    bookmarkLinkRef.current?.setAttribute('href', getBookmarkletHref())
   }, [open])
+
+  /** 북마크바 드래그 직전에 브라우저가 인식할 링크 주소를 설정한다 */
+  function handleDragStart(event: React.DragEvent<HTMLAnchorElement>) {
+    const bookmarkletHref = getBookmarkletHref()
+    bookmarkLinkRef.current?.setAttribute('href', bookmarkletHref)
+    event.dataTransfer.setData('text/uri-list', bookmarkletHref)
+    event.dataTransfer.setData('text/plain', bookmarkletHref)
+  }
 
   /** 북마크 코드를 클립보드에 복사한다 */
   async function handleCopy() {
     try {
-      const bookmarkletHref = bookmarkLinkRef.current?.getAttribute('href')
-      if (!bookmarkletHref) throw new Error('북마크 코드를 준비하지 못했습니다.')
-      await navigator.clipboard.writeText(bookmarkletHref)
+      await navigator.clipboard.writeText(getBookmarkletHref())
       toast.success('북마크 코드가 복사되었습니다.')
     } catch {
       toast.error('복사하지 못했습니다.')
@@ -46,6 +57,7 @@ export default function BookmarkSetupDialog() {
           <a
             ref={bookmarkLinkRef}
             draggable
+            onDragStart={handleDragStart}
             onClick={(event) => event.preventDefault()}
             className="flex h-11 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/5 text-sm font-semibold text-primary hover:bg-primary/10"
           >
