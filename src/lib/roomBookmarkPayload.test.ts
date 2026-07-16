@@ -29,6 +29,24 @@ describe('parseRoomBookmarkPayload', () => {
     })).toEqual({ action: 'cancel', externalId: 124, roomName: '행복룸' })
   })
 
+  it('예약 취소에 포함된 날짜와 시간을 유지한다', () => {
+    expect(parseRoomBookmarkPayload({
+      action: 'cancel',
+      externalId: 124,
+      roomName: '행복룸',
+      date: '2026-07-16',
+      startTime: '10:00',
+      endTime: '11:00',
+    })).toEqual({
+      action: 'cancel',
+      externalId: 124,
+      roomName: '행복룸',
+      date: '2026-07-16',
+      startTime: '10:00',
+      endTime: '11:00',
+    })
+  })
+
   it('숫자 문자열 예약 ID를 숫자로 정규화한다', () => {
     expect(parseRoomBookmarkPayload({
       action: 'cancel',

@@ -56,6 +56,13 @@ function getActionButtonLabel(action: RoomBookmarkPayload['action']): string {
   return action === 'cancel' ? '예약 삭제' : '예약 반영'
 }
 
+/** 북마크 동작별 상태 색상을 반환한다 */
+function getActionColor(action: RoomBookmarkPayload['action']): string {
+  if (action === 'create') return 'bg-emerald-500/10 text-emerald-700'
+  if (action === 'update') return 'bg-blue-500/10 text-blue-700'
+  return 'bg-destructive/10 text-destructive'
+}
+
 /** 북마크 예약 가져오기 화면을 표시한다 */
 export default function BookmarkImportView() {
   const router = useRouter()
@@ -195,11 +202,11 @@ export default function BookmarkImportView() {
         <p className="mt-2 text-sm text-muted-foreground">다우오피스에서 감지한 예약 {pendingPayloads.length}건을 확인해 주세요.</p>
         <div className="mt-5 max-h-[360px] overflow-y-auto rounded-md border">
           {pendingPayloads.map((item) => {
-            const isCancel = item.action === 'cancel'
+            const hasSchedule = Boolean(item.date && item.startTime && item.endTime)
             return (
               <article key={getRoomBookmarkPayloadKey(item)} className="border-b p-4 last:border-b-0">
                 <div className="flex items-start justify-between gap-3">
-                  <span className={isCancel ? 'rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive' : 'rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'}>
+                  <span className={`rounded px-2 py-0.5 text-xs font-medium ${getActionColor(item.action)}`}>
                     {getActionLabel(item.action)}
                   </span>
                   <Button size="sm" onClick={() => handleConfirm(item)} disabled={isSaving}>
@@ -208,8 +215,8 @@ export default function BookmarkImportView() {
                 </div>
                 <dl className="mt-3 space-y-2 text-sm">
                   <div className="flex items-center gap-2"><DoorOpen size={16} className="text-muted-foreground" /><dt className="sr-only">회의실</dt><dd>{item.roomName}</dd></div>
-                  {!isCancel && <div className="flex items-center gap-2"><CalendarDays size={16} className="text-muted-foreground" /><dt className="sr-only">날짜</dt><dd>{item.date}</dd></div>}
-                  {!isCancel && <div className="flex items-center gap-2"><Clock3 size={16} className="text-muted-foreground" /><dt className="sr-only">시간</dt><dd>{item.startTime} ~ {item.endTime}</dd></div>}
+                  {hasSchedule && <div className="flex items-center gap-2"><CalendarDays size={16} className="text-muted-foreground" /><dt className="sr-only">날짜</dt><dd>{item.date}</dd></div>}
+                  {hasSchedule && <div className="flex items-center gap-2"><Clock3 size={16} className="text-muted-foreground" /><dt className="sr-only">시간</dt><dd>{item.startTime} ~ {item.endTime}</dd></div>}
                 </dl>
               </article>
             )

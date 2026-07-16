@@ -30,8 +30,16 @@ export function parseRoomBookmarkPayload(value: unknown): RoomBookmarkPayload | 
   if (!['create', 'update', 'cancel'].includes(action as string)) return null
   if (!normalizedExternalId) return null
   if (typeof roomName !== 'string' || !roomName.trim()) return null
-  if (action === 'cancel') return { action, externalId: normalizedExternalId, roomName: roomName.trim() } as RoomBookmarkPayload
-  if (!isDate(date) || !isTime(startTime) || !isTime(endTime) || startTime >= endTime) return null
+  const hasSchedule = isDate(date) && isTime(startTime) && isTime(endTime) && startTime < endTime
+  if (action === 'cancel') {
+    return {
+      action,
+      externalId: normalizedExternalId,
+      roomName: roomName.trim(),
+      ...(hasSchedule ? { date, startTime, endTime } : {}),
+    } as RoomBookmarkPayload
+  }
+  if (!hasSchedule) return null
   return { action, externalId: normalizedExternalId, roomName: roomName.trim(), date, startTime, endTime } as RoomBookmarkPayload
 }
 
