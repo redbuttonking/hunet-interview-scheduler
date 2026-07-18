@@ -1,4 +1,4 @@
-import { InterviewerAvailability } from '../model/Interview'
+import { Interview, InterviewerAvailability } from '../model/Interview'
 import { RoomReservation } from '../model/Room'
 
 export interface RecommendedScheduleSlot {
@@ -31,6 +31,33 @@ function toTime(minutes: number): string {
 
 function overlapsLunch(startTime: string, endTime: string): boolean {
   return toMinutes(startTime) < 13 * 60 && toMinutes(endTime) > 12 * 60
+}
+
+function getReservableSlots(
+  date: string,
+  startTime: string,
+  reservations: RoomReservation[],
+): RecommendedScheduleSlot[] {
+  const start = toMinutes(startTime)
+  const end = start + INTERVIEW_DURATION
+  const endTime = toTime(end)
+  if (overlapsLunch(startTime, endTime)) return []
+
+  return reservations
+    .filter((reservation) =>
+      reservation.status === 'reserved' &&
+      reservation.interviewId === null &&
+      reservation.date === date &&
+      toMinutes(reservation.startTime) <= start &&
+      toMinutes(reservation.endTime) >= end,
+    )
+    .map((reservation) => ({
+      startTime,
+      endTime,
+      roomId: reservation.roomId,
+      roomName: reservation.roomName,
+      reservationId: reservation.id,
+    }))
 }
 
 function isAllAvailable(
@@ -121,4 +148,53 @@ export function recommendSchedules(
   }
 
   return results
+}
+
+/** 외부에서 확정된 시작 시간에 맞는 회의실 조합을 반환한다. */
+export function recommendFixedSchedules(
+  sessionCount: number,
+  date: string,
+  startTime: string,
+  reservations: RoomReservation[],
+): RecommendedSchedule[] {
+  if (sessionCount < 1 || !date || !startTime) return []
+
+  const optionsBySession = Array.from({ length: sessionCount }, (_, index) =>
+    getReservableSlots(date, toTime(toMinutes(startTime) + index * INTERVIEW_DURATION), reservations),
+  )
+  if (optionsBySession.some((options) => options.length === 0)) return []
+
+  let combinations: RecommendedScheduleSlot[][] = [[]]
+  for (const options of optionsBySession) {
+    combinations = combinations.flatMap((current) =>
+      options.map((option) => [...current, option]),
+    )
+  }
+  return combinations.map((slots) => ({ date, slots }))
+}
+
+/** 확정 또는 후보자 응답 대기 면접과 시간이 겹치는 면접관 ID를 반환한다. */
+export function findConflictingInterviewerIds(
+  interviewerIds: string[],
+  date: string,
+  startTime: string,
+  endTime: string,
+  scheduledInterviews: Interview[],
+): string[] {
+  const busyIds = new Set<string>()
+  for (const interview of scheduledInterviews) {
+    const slots = interview.status === 'confirmed' && interview.confirmedSlot?.date === date
+      ? interview.confirmedSlot.slots
+      : interview.status === 'pending_candidate'
+        ? (interview.candidateOptions ?? [])
+          .filter((option) => option.date === date)
+          .flatMap((option) => option.slots)
+        : []
+    const hasOverlap = slots.some((slot) =>
+      slot.startTime < endTime && startTime < slot.endTime,
+    )
+    if (!hasOverlap) continue
+    interview.interviewerIds.forEach((id) => busyIds.add(id))
+  }
+  return interviewerIds.filter((id) => busyIds.has(id))
 }

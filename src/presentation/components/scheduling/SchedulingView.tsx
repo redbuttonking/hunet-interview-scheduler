@@ -16,6 +16,7 @@ import { usePositions } from '@/application/usecase/position/usePositions'
 import { useIsViewer } from '@/presentation/components/auth/AuthProvider'
 import InterviewCreateModal from './InterviewCreateModal'
 import DirectConfirmModal from './DirectConfirmModal'
+import ExistingInterviewConfirmModal from './ExistingInterviewConfirmModal'
 import InterviewEditModal from './InterviewEditModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
 import ScheduleRecommendModal from './ScheduleRecommendModal'
@@ -73,6 +74,7 @@ export default function SchedulingView() {
 
   const [createOpen, setCreateOpen] = useState(false)
   const [directConfirmOpen, setDirectConfirmOpen] = useState(false)
+  const [existingConfirmModal, setExistingConfirmModal] = useState<Interview | null>(null)
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
   const [recommendModal, setRecommendModal] = useState<RecommendModalState | null>(null)
   const [proposeModal, setProposeModal] = useState<Interview | null>(null)
@@ -381,7 +383,16 @@ export default function SchedulingView() {
 
                 {/* pending_slack: 슬랙 발송 버튼 */}
                 {interview.status === 'pending_slack' && !isViewer && (
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-4 flex justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => setExistingConfirmModal(interview)}
+                    >
+                      <Zap size={13} />
+                      즉시 확정
+                    </Button>
                     <Button
                       size="sm"
                       className="gap-1.5"
@@ -559,6 +570,17 @@ export default function SchedulingView() {
       {/* 모달 */}
       <InterviewCreateModal open={createOpen} onOpenChange={setCreateOpen} />
       <DirectConfirmModal open={directConfirmOpen} onOpenChange={setDirectConfirmOpen} />
+      {existingConfirmModal && (
+        <ExistingInterviewConfirmModal
+          open={!!existingConfirmModal}
+          onOpenChange={(open) => !open && setExistingConfirmModal(null)}
+          interview={existingConfirmModal}
+          scheduledInterviews={interviews.filter((interview) =>
+            interview.status === 'confirmed' || interview.status === 'pending_candidate',
+          )}
+          interviewerNames={Object.fromEntries(interviewers.map((interviewer) => [interviewer.id, interviewer.name]))}
+        />
+      )}
       <SlackTemplateModal open={templateOpen} onOpenChange={setTemplateOpen} />
       <ReminderTemplateModal open={reminderTemplateOpen} onOpenChange={setReminderTemplateOpen} />
 
