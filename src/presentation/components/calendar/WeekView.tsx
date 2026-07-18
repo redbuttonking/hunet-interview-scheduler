@@ -177,7 +177,7 @@ export default function WeekView({
                 className="grid"
                 style={{ gridTemplateColumns: '150px repeat(5, 1fr)' }}
               >
-                <div className="flex items-start px-3 py-3 bg-muted/10 border-r border-border min-h-[124px]">
+                <div className="flex items-start px-3 py-3 bg-muted/10 border-r border-border h-[150px]">
                   <span className="text-xs font-semibold text-foreground leading-tight pt-0.5">
                     {room.name}
                   </span>
@@ -190,7 +190,7 @@ export default function WeekView({
                     <div
                       key={dStr}
                       className={cn(
-                        'border-l border-border px-1.5 py-1.5 cursor-pointer hover:bg-muted/30 transition-colors min-h-[124px]',
+                        'border-l border-border px-1.5 py-1.5 cursor-pointer hover:bg-muted/30 transition-colors h-[150px]',
                         isToday && 'bg-primary/3',
                       )}
                       onClick={() => onDayClick(d)}

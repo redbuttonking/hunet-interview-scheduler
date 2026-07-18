@@ -297,7 +297,7 @@ export default function DayView({
                             if (!isViewer) onEditReservation(res)
                           }}
                         >
-                          <div className="px-1 py-1 h-full flex flex-col justify-center overflow-hidden">
+                          <div className="px-2 py-2 h-full flex flex-col justify-start gap-1 overflow-hidden">
                             {interviewInfo ? (
                               <>
                                 <p className={cn('text-[10px] font-semibold leading-tight truncate', style.text)}>
