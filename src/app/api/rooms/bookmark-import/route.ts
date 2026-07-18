@@ -6,7 +6,7 @@ import { parseRoomBookmarkPayload } from '@/lib/roomBookmarkPayload'
 import { syncRoomReservation } from '@/infrastructure/firebase/roomReservationSync'
 
 /** 예약을 등록할 수 있는 로그인 사용자인지 확인한다 */
-async function verifySchedulingUser(req: NextRequest): Promise<void> {
+async function verifySchedulingUser(req: NextRequest): Promise<{ userId: string; name: string }> {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
   if (!token) throw new Error('로그인이 필요합니다.')
   const decoded = await adminAuth().verifyIdToken(token)
@@ -15,12 +15,14 @@ async function verifySchedulingUser(req: NextRequest): Promise<void> {
   if (!userDoc.exists || (role !== 'admin' && role !== 'recruiter')) {
     throw new Error('회의실 예약을 등록할 권한이 없습니다.')
   }
+  return { userId: decoded.uid, name: userDoc.data()?.name ?? '등록자 정보 없음' }
 }
 
 /** 북마크에서 감지한 회의실 예약을 저장한다 */
 export async function POST(req: NextRequest) {
+  let bookingOwner: { userId: string; name: string }
   try {
-    await verifySchedulingUser(req)
+    bookingOwner = await verifySchedulingUser(req)
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 401 })
   }
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
   if (!payload) return NextResponse.json({ error: '예약 정보 형식이 올바르지 않습니다.' }, { status: 400 })
 
   try {
-    await syncRoomReservation(payload)
+    await syncRoomReservation(payload, bookingOwner)
     return NextResponse.json({ ok: true })
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 })

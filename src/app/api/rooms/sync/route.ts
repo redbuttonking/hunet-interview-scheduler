@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await syncRoomReservation(payload)
+    await syncRoomReservation(payload, { userId: null, name: '그룹웨어 확인' })
     return json({ ok: true })
   } catch (e) {
     return json({ error: (e as Error).message }, 500)

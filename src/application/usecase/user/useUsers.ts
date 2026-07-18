@@ -12,10 +12,11 @@ async function getBearerToken(): Promise<string> {
   return getIdToken(auth.currentUser)
 }
 
-export function useUsers() {
+export function useUsers(enabled = true) {
   return useQuery({
     queryKey: USERS_KEY,
     queryFn: () => userRepository.findAll(),
+    enabled,
   })
 }
 

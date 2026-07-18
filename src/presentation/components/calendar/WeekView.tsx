@@ -30,8 +30,8 @@ interface Props {
   days: Date[]
   rooms: Room[]
   reservations: RoomReservation[]
-  /** interviewId → 후보자명 맵 */
-  interviewMap: Record<string, string>
+  /** interviewId → 캘린더 표시용 면접 정보 맵 */
+  interviewInfoMap: Record<string, { candidateName: string; positionName: string }>
   weekStart: Date
   onWeekChange: (date: Date) => void
   onDayClick: (date: Date) => void
@@ -43,7 +43,7 @@ export default function WeekView({
   days,
   rooms,
   reservations,
-  interviewMap,
+  interviewInfoMap,
   weekStart,
   onWeekChange,
   onDayClick,
@@ -177,7 +177,7 @@ export default function WeekView({
                 className="grid"
                 style={{ gridTemplateColumns: '150px repeat(5, 1fr)' }}
               >
-                <div className="flex items-start px-3 py-3 bg-muted/10 border-r border-border min-h-[96px]">
+                <div className="flex items-start px-3 py-3 bg-muted/10 border-r border-border min-h-[124px]">
                   <span className="text-xs font-semibold text-foreground leading-tight pt-0.5">
                     {room.name}
                   </span>
@@ -190,14 +190,15 @@ export default function WeekView({
                     <div
                       key={dStr}
                       className={cn(
-                        'border-l border-border px-1.5 py-1.5 cursor-pointer hover:bg-muted/30 transition-colors min-h-[96px]',
+                        'border-l border-border px-1.5 py-1.5 cursor-pointer hover:bg-muted/30 transition-colors min-h-[124px]',
                         isToday && 'bg-primary/3',
                       )}
                       onClick={() => onDayClick(d)}
                     >
                       <div className="flex flex-col gap-1">
                         {cellRes.slice(0, 3).map((res) => {
-                          const candidateName = res.interviewId ? interviewMap[res.interviewId] : null
+                          const interviewInfo = res.interviewId ? interviewInfoMap[res.interviewId] : null
+                          const ownerName = res.bookedByName || '등록자 정보 없음'
                           return (
                             <div
                               key={res.id}
@@ -205,20 +206,31 @@ export default function WeekView({
                                 'rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight cursor-pointer',
                                 STATUS_PILL[res.status],
                               )}
+                              title={[
+                                `${res.startTime}–${res.endTime}`,
+                                STATUS_LABEL[res.status],
+                                interviewInfo ? `${interviewInfo.candidateName} · ${interviewInfo.positionName}` : ownerName,
+                                res.memo,
+                              ].filter(Boolean).join('\n')}
                               onClick={(e) => {
                                 e.stopPropagation()
                                 onEditReservation(res)
                               }}
                             >
-                              {candidateName ? (
+                              {interviewInfo ? (
                                 <div>
                                   <div className="opacity-70">{res.startTime}–{res.endTime}</div>
                                   <div className="truncate">
-                                    {res.status === 'coordinating' ? `${candidateName} 조율중` : candidateName}
+                                    {interviewInfo.candidateName}
                                   </div>
+                                  <div className="truncate opacity-70">{interviewInfo.positionName} · {STATUS_LABEL[res.status]}</div>
                                 </div>
                               ) : (
-                                <span className="truncate">{res.startTime}–{res.endTime}</span>
+                                <div>
+                                  <div className="opacity-70">{res.startTime}–{res.endTime}</div>
+                                  <div className="truncate">{ownerName}</div>
+                                  {res.memo && <div className="truncate opacity-70">{res.memo}</div>}
+                                </div>
                               )}
                             </div>
                           )

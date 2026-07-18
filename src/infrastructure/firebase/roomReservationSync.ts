@@ -65,7 +65,10 @@ async function cancelReservation(externalId: number): Promise<void> {
 }
 
 /** 외부 예약 생성 또는 변경을 시스템 예약에 반영한다 */
-async function upsertReservation(payload: RoomBookmarkPayload): Promise<void> {
+async function upsertReservation(
+  payload: RoomBookmarkPayload,
+  bookingOwner?: { userId: string | null; name: string },
+): Promise<void> {
   const room = await findOrCreateRoom(payload.roomName)
   const existing = await findByExternalId(payload.externalId)
   const fields = {
@@ -78,7 +81,14 @@ async function upsertReservation(payload: RoomBookmarkPayload): Promise<void> {
   }
 
   if (existing) {
-    await existing.ref.update(fields)
+    const existingOwnerName = existing.data().bookedByName
+    await existing.ref.update({
+      ...fields,
+      ...(bookingOwner && !existingOwnerName ? {
+        bookedByUserId: bookingOwner.userId,
+        bookedByName: bookingOwner.name,
+      } : {}),
+    })
     return
   }
 
@@ -86,16 +96,22 @@ async function upsertReservation(payload: RoomBookmarkPayload): Promise<void> {
     ...fields,
     status: 'reserved',
     interviewId: null,
+    bookedByUserId: bookingOwner?.userId ?? null,
+    bookedByName: bookingOwner?.name ?? null,
+    memo: '',
     externalId: payload.externalId,
     createdAt: FieldValue.serverTimestamp(),
   })
 }
 
 /** 외부 회의실 예약 생성·변경·취소를 시스템 예약에 동기화한다 */
-export async function syncRoomReservation(payload: RoomBookmarkPayload): Promise<void> {
+export async function syncRoomReservation(
+  payload: RoomBookmarkPayload,
+  bookingOwner?: { userId: string | null; name: string },
+): Promise<void> {
   if (payload.action === 'cancel') {
     await cancelReservation(payload.externalId)
     return
   }
-  await upsertReservation(payload)
+  await upsertReservation(payload, bookingOwner)
 }

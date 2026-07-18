@@ -23,6 +23,12 @@ export interface RoomReservation {
   status: ReservationStatus
   /** 배정된 면접 ID (조율중/확정 상태에서만 존재) */
   interviewId: string | null
+  /** 예약을 등록한 시스템 사용자 ID */
+  bookedByUserId: string | null
+  /** 예약을 등록한 시스템 사용자 이름 */
+  bookedByName: string | null
+  /** 회의실 사용 목적 등 예약 메모 */
+  memo: string
   /** 다우오피스 예약 ID (확장 프로그램으로 동기화된 경우에만 존재) */
   externalId?: number
   createdAt: Date

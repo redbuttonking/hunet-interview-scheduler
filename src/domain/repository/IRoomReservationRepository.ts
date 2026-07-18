@@ -8,6 +8,9 @@ export interface CreateReservationInput {
   endTime: string
   status: ReservationStatus
   interviewId: string | null
+  bookedByUserId: string | null
+  bookedByName: string | null
+  memo: string
 }
 
 export type UpdateReservationInput = Partial<CreateReservationInput>

@@ -33,6 +33,9 @@ function toReservation(id: string, data: Record<string, unknown>): RoomReservati
     endTime: data.endTime as string,
     status: data.status as RoomReservation['status'],
     interviewId: (data.interviewId as string | null) ?? null,
+    bookedByUserId: (data.bookedByUserId as string | null) ?? null,
+    bookedByName: (data.bookedByName as string | null) ?? null,
+    memo: (data.memo as string | undefined) ?? '',
     createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
     updatedAt: (data.updatedAt as Timestamp)?.toDate() ?? new Date(),
   }
@@ -137,6 +140,11 @@ export const roomReservationRepository: IRoomReservationRepository = {
         const date = d.date as string
         const blockStart = d.startTime as string
         const blockEnd = d.endTime as string
+        const bookingFields = {
+          bookedByUserId: (d.bookedByUserId as string | null) ?? null,
+          bookedByName: (d.bookedByName as string | null) ?? null,
+          memo: (d.memo as string | undefined) ?? '',
+        }
 
         const confirmedRanges = blockMap.get(blockIds[i])!
           .sort((a, b) => a.confirmedStart.localeCompare(b.confirmedStart))
@@ -155,6 +163,7 @@ export const roomReservationRepository: IRoomReservationRepository = {
               roomId, roomName, date,
               startTime: prevEnd, endTime: range.confirmedStart,
               status: 'reserved', interviewId: null,
+              ...bookingFields,
               createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
             })
           }
@@ -171,6 +180,7 @@ export const roomReservationRepository: IRoomReservationRepository = {
               roomId, roomName, date,
               startTime: range.confirmedStart, endTime: range.confirmedEnd,
               status: 'confirmed', interviewId: range.interviewId,
+              ...bookingFields,
               createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
             })
           }
@@ -183,6 +193,7 @@ export const roomReservationRepository: IRoomReservationRepository = {
             roomId, roomName, date,
             startTime: prevEnd, endTime: blockEnd,
             status: 'reserved', interviewId: null,
+            ...bookingFields,
             createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
           })
         }
@@ -222,6 +233,11 @@ export const roomReservationRepository: IRoomReservationRepository = {
         const date = d.date as string
         const blockStart = d.startTime as string
         const blockEnd = d.endTime as string
+        const bookingFields = {
+          bookedByUserId: (d.bookedByUserId as string | null) ?? null,
+          bookedByName: (d.bookedByName as string | null) ?? null,
+          memo: (d.memo as string | undefined) ?? '',
+        }
 
         const coordRanges = blockMap.get(blockId)!
           .sort((a, b) => a.startTime.localeCompare(b.startTime))
@@ -236,6 +252,7 @@ export const roomReservationRepository: IRoomReservationRepository = {
               roomId, roomName, date,
               startTime: prevEnd, endTime: range.startTime,
               status: 'reserved', interviewId: null,
+              ...bookingFields,
               createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
             })
           }
@@ -255,6 +272,7 @@ export const roomReservationRepository: IRoomReservationRepository = {
               roomId, roomName, date,
               startTime: range.startTime, endTime: range.endTime,
               status: 'coordinating', interviewId,
+              ...bookingFields,
               createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
             })
             resultIdMap.set(key, newRef.id)
@@ -268,6 +286,7 @@ export const roomReservationRepository: IRoomReservationRepository = {
             roomId, roomName, date,
             startTime: prevEnd, endTime: blockEnd,
             status: 'reserved', interviewId: null,
+            ...bookingFields,
             createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
           })
         }

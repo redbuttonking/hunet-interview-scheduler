@@ -53,8 +53,8 @@ interface Props {
   date: Date
   rooms: Room[]
   reservations: RoomReservation[]
-  /** interviewId → 후보자명 맵 */
-  interviewMap: Record<string, string>
+  /** interviewId → 캘린더 표시용 면접 정보 맵 */
+  interviewInfoMap: Record<string, { candidateName: string; positionName: string }>
   onDateChange: (date: Date) => void
   onWeekView: () => void
   onCreateDraft: (draft: { roomId: string; date: string; startTime: string; endTime: string }) => void
@@ -65,7 +65,7 @@ export default function DayView({
   date,
   rooms,
   reservations,
-  interviewMap,
+  interviewInfoMap,
   onDateChange,
   onWeekView,
   onCreateDraft,
@@ -272,7 +272,8 @@ export default function DayView({
                       const leftPct   = minsToPct(startMins)
                       const widthPct  = ((endMins - startMins) / DAY_RANGE) * 100
                       const style     = STATUS_STYLE[res.status]
-                      const candidateName = res.interviewId ? interviewMap[res.interviewId] : null
+                      const interviewInfo = res.interviewId ? interviewInfoMap[res.interviewId] : null
+                      const ownerName = res.bookedByName || '등록자 정보 없음'
 
                       return (
                         <div
@@ -285,6 +286,12 @@ export default function DayView({
                             left: `${leftPct}%`,
                             width: `${Math.max(widthPct, 0.8)}%`,
                           }}
+                          title={[
+                            `${res.startTime} ~ ${res.endTime}`,
+                            STATUS_LABEL[res.status],
+                            interviewInfo ? `${interviewInfo.candidateName} · ${interviewInfo.positionName}` : ownerName,
+                            res.memo,
+                          ].filter(Boolean).join('\n')}
                           onClick={(e) => {
                             e.stopPropagation()
                             if (!isViewer) onEditReservation(res)
@@ -295,9 +302,9 @@ export default function DayView({
                               {res.startTime} ~ {res.endTime}
                             </p>
                             <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
-                              {candidateName
-                                ? (res.status === 'coordinating' ? `${candidateName} 조율중` : candidateName)
-                                : STATUS_LABEL[res.status]}
+                              {interviewInfo
+                                ? `${interviewInfo.candidateName} · ${interviewInfo.positionName}`
+                                : res.memo || ownerName}
                             </p>
                           </div>
                         </div>

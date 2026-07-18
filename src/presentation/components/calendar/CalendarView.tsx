@@ -13,7 +13,9 @@ import {
   useDeleteReservation,
 } from '@/application/usecase/room/useRoomReservations'
 import { useInterviews, useUpdateConfirmedReservation } from '@/application/usecase/interview/useInterviews'
+import { useUsers } from '@/application/usecase/user/useUsers'
 import { hasTimeOverlap } from '@/lib/reservationUtils'
+import { useAuthContext } from '@/presentation/components/auth/AuthProvider'
 import WeekView from './WeekView'
 import DayView from './DayView'
 import ReservationModal from './ReservationModal'
@@ -22,6 +24,7 @@ import BookmarkSetupDialog from '../roomBookmark/BookmarkSetupDialog'
 type ViewMode = 'week' | 'day'
 
 export default function CalendarView() {
+  const { user } = useAuthContext()
   const [mode, setMode] = useState<ViewMode>('week')
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [weekStart, setWeekStart] = useState(() =>
@@ -44,10 +47,14 @@ export default function CalendarView() {
   const { data: rooms = [] } = useRooms()
   const { data: reservations = [] } = useRoomReservations(startDate, endDate)
   const { data: interviews = [] } = useInterviews()
+  const { data: users = [] } = useUsers(user?.role === 'admin')
 
-  // interviewId → 후보자명 맵 (확정 예약 블록에 후보자명 표시용)
-  const interviewMap = useMemo(
-    () => Object.fromEntries(interviews.map((iv) => [iv.id, iv.candidateName])),
+  // interviewId → 캘린더 표시용 후보자·포지션 정보 맵
+  const interviewInfoMap = useMemo(
+    () => Object.fromEntries(interviews.map((iv) => [iv.id, {
+      candidateName: iv.candidateName,
+      positionName: iv.positionName,
+    }])),
     [interviews],
   )
 
@@ -110,7 +117,16 @@ export default function CalendarView() {
     try {
       if (editingReservation) {
         if (isCoordinatingInterview(editingReservation)) {
-          toast.error('조율 중인 예약은 수정할 수 없습니다. 일정 조율에서 조율을 취소해 주세요.')
+          await updateRes.mutateAsync({
+            id: editingReservation.id,
+            input: {
+              memo: data.memo,
+              bookedByUserId: data.bookedByUserId,
+              bookedByName: data.bookedByName,
+            },
+          })
+          toast.success('예약 메모가 수정되었습니다.')
+          setModalOpen(false)
           return
         }
         if (isConfirmedInterview(editingReservation)) {
@@ -168,7 +184,7 @@ export default function CalendarView() {
             days={days}
             rooms={rooms}
             reservations={reservations}
-            interviewMap={interviewMap}
+            interviewInfoMap={interviewInfoMap}
             weekStart={weekStart}
             onWeekChange={setWeekStart}
             onDayClick={goToDay}
@@ -180,7 +196,7 @@ export default function CalendarView() {
             date={selectedDate}
             rooms={rooms}
             reservations={reservations}
-            interviewMap={interviewMap}
+            interviewInfoMap={interviewInfoMap}
             onDateChange={handleDayDateChange}
             onWeekView={() => setMode('week')}
             onCreateDraft={openCreateModal}
@@ -194,11 +210,14 @@ export default function CalendarView() {
           rooms={rooms}
           reservation={editingReservation}
           draft={modalDraft}
-          candidateName={
+          interviewInfo={
             editingReservation?.interviewId
-              ? interviewMap[editingReservation.interviewId]
+              ? interviewInfoMap[editingReservation.interviewId]
               : undefined
           }
+          currentUser={user}
+          users={users}
+          isAdmin={user?.role === 'admin'}
           onSave={handleSave}
           onDelete={handleDelete}
           isSaving={createRes.isPending || updateRes.isPending || updateConfirmedRes.isPending}
