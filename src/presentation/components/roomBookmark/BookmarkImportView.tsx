@@ -99,10 +99,10 @@ export default function BookmarkImportView() {
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
-  /** 예약 정보를 받은 비로그인 사용자를 로그인 화면으로 이동한다 */
+  /** 북마크를 실행한 비로그인 사용자를 예약 전에 로그인 화면으로 이동한다 */
   useEffect(() => {
-    if (!loading && !user && payload) router.replace('/login?returnTo=%2Fbookmark-import')
-  }, [loading, user, payload, router])
+    if (!loading && !user) router.replace('/login?returnTo=%2Fbookmark-import')
+  }, [loading, user, router])
 
   /** 확인한 북마크 예약을 시스템에 저장한다 */
   async function handleConfirm(payload: RoomBookmarkPayload) {

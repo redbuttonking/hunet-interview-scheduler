@@ -19,8 +19,9 @@ test('인증 없이 대시보드에 접근하면 로그인 화면으로 이동�
   await expect(page.getByRole('heading', { name: '로그인' })).toBeVisible()
 })
 
-test('북마크 예약 가져오기 화면이 표시된다', async ({ page }) => {
+test('인증 없이 북마크 예약을 실행하면 로그인 화면으로 이동한다', async ({ page }) => {
   await page.goto('/bookmark-import')
 
-  await expect(page.getByRole('heading', { name: '회의실 예약 가져오기' })).toBeVisible()
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fbookmark-import$/)
+  await expect(page.getByRole('heading', { name: '로그인' })).toBeVisible()
 })
