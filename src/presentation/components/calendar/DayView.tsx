@@ -248,7 +248,7 @@ export default function DayView({
                       else rowRefs.current.delete(room.id)
                     }}
                     className={cn('relative select-none', isViewer ? 'cursor-default' : 'cursor-crosshair')}
-                    style={{ height: 88 }}
+                    style={{ height: 104 }}
                     onMouseDown={(e) => handleRowMouseDown(e, room.id)}
                   >
                     {/* 시간 구분선 */}
@@ -297,15 +297,37 @@ export default function DayView({
                             if (!isViewer) onEditReservation(res)
                           }}
                         >
-                          <div className="px-2 py-1 h-full flex flex-col justify-center overflow-hidden">
-                            <p className={cn('text-xs font-semibold leading-tight truncate', style.text)}>
-                              {res.startTime} ~ {res.endTime}
-                            </p>
-                            <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
-                              {interviewInfo
-                                ? `${interviewInfo.candidateName} · ${interviewInfo.positionName}`
-                                : res.memo || ownerName}
-                            </p>
+                          <div className="px-1 py-1 h-full flex flex-col justify-center overflow-hidden">
+                            {interviewInfo ? (
+                              <>
+                                <p className={cn('text-[10px] font-semibold leading-tight truncate', style.text)}>
+                                  {interviewInfo.positionName}
+                                </p>
+                                <p className={cn('text-[10px] font-semibold leading-tight whitespace-nowrap', style.text)}>
+                                  {res.startTime} ~ {res.endTime}
+                                </p>
+                                <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
+                                  후보자 {interviewInfo.candidateName}
+                                </p>
+                                <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
+                                  예약자 {ownerName}
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className={cn('text-[10px] font-semibold leading-tight whitespace-nowrap', style.text)}>
+                                  {res.startTime} ~ {res.endTime}
+                                </p>
+                                <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
+                                  예약자 {ownerName}
+                                </p>
+                                {res.memo && (
+                                  <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
+                                    {res.memo}
+                                  </p>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                       )

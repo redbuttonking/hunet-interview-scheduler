@@ -168,7 +168,7 @@ export default function CalendarView() {
   return (
     /* 1000px 이하에서 가로 스크롤, 얇은 스크롤바 적용 */
     <div className="calendar-scroll">
-      <div className="flex flex-col gap-4 min-w-[1000px]">
+      <div className={`flex flex-col gap-4 ${mode === 'day' ? 'min-w-[1700px]' : 'min-w-[1200px]'}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">캘린더</h1>

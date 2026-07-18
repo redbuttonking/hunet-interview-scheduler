@@ -217,19 +217,16 @@ export default function WeekView({
                                 onEditReservation(res)
                               }}
                             >
-                              {interviewInfo ? (
+                              {res.status === 'confirmed' && interviewInfo ? (
                                 <div>
-                                  <div className="opacity-70">{res.startTime}–{res.endTime}</div>
+                                  <div className="whitespace-nowrap opacity-70">{res.startTime}–{res.endTime}</div>
                                   <div className="truncate">
                                     {interviewInfo.candidateName}
                                   </div>
-                                  <div className="truncate opacity-70">{interviewInfo.positionName} · {STATUS_LABEL[res.status]}</div>
                                 </div>
                               ) : (
                                 <div>
-                                  <div className="opacity-70">{res.startTime}–{res.endTime}</div>
-                                  <div className="truncate">{ownerName}</div>
-                                  {res.memo && <div className="truncate opacity-70">{res.memo}</div>}
+                                  <div className="whitespace-nowrap opacity-70">{res.startTime}–{res.endTime}</div>
                                 </div>
                               )}
                             </div>
