@@ -248,7 +248,7 @@ export default function DayView({
                       else rowRefs.current.delete(room.id)
                     }}
                     className={cn('relative select-none', isViewer ? 'cursor-default' : 'cursor-crosshair')}
-                    style={{ height: 104 }}
+                    style={{ height: 124 }}
                     onMouseDown={(e) => handleRowMouseDown(e, room.id)}
                   >
                     {/* 시간 구분선 */}

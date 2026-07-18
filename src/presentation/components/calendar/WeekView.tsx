@@ -203,7 +203,7 @@ export default function WeekView({
                             <div
                               key={res.id}
                               className={cn(
-                                'rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight cursor-pointer',
+                                'rounded px-2 py-0.5 text-xs font-medium leading-tight cursor-pointer',
                                 STATUS_PILL[res.status],
                               )}
                               title={[
