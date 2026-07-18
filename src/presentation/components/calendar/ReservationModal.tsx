@@ -252,7 +252,6 @@ export default function ReservationModal({
               id="reservation-memo"
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
-              placeholder="예: 외부 미팅, 홍길동 사용"
               rows={3}
               className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
             />
