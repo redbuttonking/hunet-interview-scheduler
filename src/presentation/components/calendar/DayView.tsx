@@ -297,32 +297,32 @@ export default function DayView({
                             if (!isViewer) onEditReservation(res)
                           }}
                         >
-                          <div className="px-2 py-2 h-full flex flex-col justify-start gap-1 overflow-hidden">
+                          <div className="px-2 py-2 h-full flex flex-col justify-start gap-1.5 overflow-hidden">
                             {interviewInfo ? (
                               <>
-                                <p className={cn('text-[10px] font-semibold leading-tight truncate', style.text)}>
+                                <p className={cn('text-xs font-semibold leading-tight truncate', style.text)}>
                                   {interviewInfo.positionName}
                                 </p>
-                                <p className={cn('text-[10px] font-semibold leading-tight whitespace-nowrap', style.text)}>
+                                <p className={cn('text-xs font-semibold leading-tight whitespace-nowrap', style.text)}>
                                   {res.startTime} ~ {res.endTime}
                                 </p>
-                                <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
-                                  후보자 {interviewInfo.candidateName}
+                                <p className={cn('text-xs leading-tight truncate opacity-80', style.text)}>
+                                  후보자: {interviewInfo.candidateName}
                                 </p>
-                                <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
-                                  예약자 {ownerName}
+                                <p className={cn('text-xs leading-tight truncate opacity-80', style.text)}>
+                                  예약자: {ownerName}
                                 </p>
                               </>
                             ) : (
                               <>
-                                <p className={cn('text-[10px] font-semibold leading-tight whitespace-nowrap', style.text)}>
+                                <p className={cn('text-xs font-semibold leading-tight whitespace-nowrap', style.text)}>
                                   {res.startTime} ~ {res.endTime}
                                 </p>
-                                <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
-                                  예약자 {ownerName}
+                                <p className={cn('text-xs leading-tight truncate opacity-80', style.text)}>
+                                  예약자: {ownerName}
                                 </p>
                                 {res.memo && (
-                                  <p className={cn('text-[10px] leading-tight truncate opacity-80', style.text)}>
+                                  <p className={cn('text-xs leading-tight truncate opacity-80', style.text)}>
                                     {res.memo}
                                   </p>
                                 )}
