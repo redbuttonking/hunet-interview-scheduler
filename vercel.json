@@ -6,6 +6,10 @@
     {
       "path": "/api/cron/remind",
       "schedule": "0 0 * * 1-4"
+    },
+    {
+      "path": "/api/cron/archive-interviews",
+      "schedule": "0 15 * * *"
     }
   ]
 }

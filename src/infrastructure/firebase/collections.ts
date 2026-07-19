@@ -3,6 +3,7 @@ export const COLLECTIONS = {
   POSITIONS: 'positions',
   INTERVIEWERS: 'interviewers',
   INTERVIEWS: 'interviews',
+  INTERVIEW_ARCHIVES: 'interviewArchives',
   ROOMS: 'rooms',
   ROOM_RESERVATIONS: 'roomReservations',
   SETTINGS: 'settings',
