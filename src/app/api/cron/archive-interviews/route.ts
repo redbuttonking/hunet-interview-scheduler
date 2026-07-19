@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     .get()
 
   let archived = 0
+  let deletedArchives = 0
   const errors: string[] = []
 
   for (const interviewDoc of interviewsSnap.docs) {
@@ -35,20 +36,49 @@ export async function GET(req: NextRequest) {
     if (!confirmedSlot?.date || !isInterviewArchiveDue(confirmedSlot.date, today)) continue
 
     try {
+      const [reservationSnap, interviewerSnaps] = await Promise.all([
+        db
+          .collection(COLLECTIONS.ROOM_RESERVATIONS)
+          .where('interviewId', '==', interviewDoc.id)
+          .get(),
+        Promise.all(
+          ((interview.interviewerIds as string[] | undefined) ?? []).map((id) =>
+            db.collection(COLLECTIONS.INTERVIEWERS).doc(id).get(),
+          ),
+        ),
+      ])
+      const manualInterviewerNames = ((interview.manualInterviewers as { name?: string }[] | undefined) ?? [])
+        .map((interviewer) => interviewer.name ?? '')
+      const interviewerNames = [
+        ...interviewerSnaps
+          .filter((interviewer) => interviewer.exists)
+          .map((interviewer) => interviewer.data()?.name as string),
+        ...manualInterviewerNames,
+      ]
+      const bookedByNames = reservationSnap.docs
+        .map((reservation) => reservation.data().bookedByName as string | null)
+        .filter((name): name is string => Boolean(name))
+      const reservationSlots = reservationSnap.docs.map((reservation) => {
+        const data = reservation.data()
+        return {
+          startTime: data.startTime as string,
+          endTime: data.endTime as string,
+          roomName: data.roomName as string,
+        }
+      })
       const summary = createInterviewArchiveSummary({
         candidateName: interview.candidateName as string,
         positionName: interview.positionName as string,
         typeLabel: interview.typeLabel as string,
         sessions: (interview.sessions as { rounds: string[] }[]) ?? [],
+        interviewerNames,
+        bookedByNames,
         confirmedSlot: interview.confirmedSlot as {
           date: string
-          slots: { roomName: string }[]
+          slots: { startTime: string; endTime: string; roomName: string }[]
         },
       })
-      const reservationSnap = await db
-        .collection(COLLECTIONS.ROOM_RESERVATIONS)
-        .where('interviewId', '==', interviewDoc.id)
-        .get()
+      if (reservationSlots.length > 0) summary.scheduledSlots = reservationSlots
 
       const batch = db.batch()
       batch.set(db.collection(COLLECTIONS.INTERVIEW_ARCHIVES).doc(interviewDoc.id), {
@@ -65,5 +95,19 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, archived, errors })
+  while (true) {
+    const expiredArchiveSnap = await db
+      .collection(COLLECTIONS.INTERVIEW_ARCHIVES)
+      .where('deleteAfter', '<=', today)
+      .limit(400)
+      .get()
+    if (expiredArchiveSnap.empty) break
+    const batch = db.batch()
+    expiredArchiveSnap.docs.forEach((archiveDoc) => batch.delete(archiveDoc.ref))
+    await batch.commit()
+    deletedArchives += expiredArchiveSnap.size
+    if (expiredArchiveSnap.size < 400) break
+  }
+
+  return NextResponse.json({ ok: true, archived, deletedArchives, errors })
 }

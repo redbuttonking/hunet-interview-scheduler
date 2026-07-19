@@ -13,6 +13,7 @@ import { useResetData, type ResetCollectionKey } from '@/application/usecase/adm
 
 const COLLECTION_LIST: { key: ResetCollectionKey; label: string; description: string }[] = [
   { key: 'interviews',       label: '인터뷰 조율 건',  description: '면접 조율 건 및 확정 일정 데이터' },
+  { key: 'interviewArchives', label: '인터뷰 보관 이력', description: '후보자명과 확정 인터뷰 보관 기록' },
   { key: 'interviewers',     label: '면접관',          description: '면접관 명부' },
   { key: 'positions',        label: '포지션',          description: '채용 포지션 목록' },
   { key: 'roomReservations', label: '회의실 예약',      description: '회의실 예약 현황' },

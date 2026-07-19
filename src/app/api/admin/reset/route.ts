@@ -3,10 +3,11 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { adminAuth, adminDb } from '@/infrastructure/firebase/adminConfig'
 import { COLLECTIONS } from '@/infrastructure/firebase/collections'
 
-type CollectionKey = 'interviews' | 'interviewers' | 'positions' | 'roomReservations' | 'rooms'
+type CollectionKey = 'interviews' | 'interviewArchives' | 'interviewers' | 'positions' | 'roomReservations' | 'rooms'
 
 const ALLOWED: Record<CollectionKey, string> = {
   interviews:       COLLECTIONS.INTERVIEWS,
+  interviewArchives: COLLECTIONS.INTERVIEW_ARCHIVES,
   interviewers:     COLLECTIONS.INTERVIEWERS,
   positions:        COLLECTIONS.POSITIONS,
   roomReservations: COLLECTIONS.ROOM_RESERVATIONS,

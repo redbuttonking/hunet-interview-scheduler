@@ -1,7 +1,7 @@
 'use client'
 
 // 개인정보가 제거된 확정 인터뷰 보관 이력을 표시하는 관리자 전용 섹션
-import { Archive, CalendarDays, MapPin } from 'lucide-react'
+import { Archive, CalendarDays, Clock3, MapPin, UserRound, Users } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { useInterviewArchives } from '@/application/usecase/admin/useInterviewArchives'
@@ -19,7 +19,7 @@ export default function InterviewArchiveSection() {
           <div>
             <h2 className="text-base font-bold text-foreground">인터뷰 보관 이력</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              인터뷰일로부터 7일이 지난 확정 건입니다. 후보자명 외 면접관과 Slack 정보는 저장하지 않습니다.
+              인터뷰일로부터 7일이 지난 확정 건입니다. 인터뷰일 기준 3개월 뒤 완전히 삭제됩니다.
             </p>
           </div>
         </div>
@@ -45,11 +45,21 @@ export default function InterviewArchiveSection() {
                 <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>후보자 {archive.candidateName}</span>
                   <span className="inline-flex items-center gap-1"><CalendarDays size={13} />{archive.interviewDate}</span>
-                  <span className="inline-flex items-center gap-1"><MapPin size={13} />{archive.roomNames.join(', ')}</span>
+                  <span className="inline-flex items-center gap-1"><Users size={13} />면접관 {archive.interviewerNames.join(', ') || '정보 없음'}</span>
+                  <span className="inline-flex items-center gap-1"><UserRound size={13} />예약자 {archive.bookedByNames.join(', ') || '정보 없음'}</span>
                   {archive.archivedAt && (
                     <span>보관 {format(new Date(archive.archivedAt), 'yyyy.MM.dd', { locale: ko })}</span>
                   )}
+                  <span>삭제 예정 {archive.deleteAfter}</span>
                 </div>
+                <ul className="mt-2 flex flex-col gap-1">
+                  {archive.scheduledSlots.map((slot, index) => (
+                    <li key={`${slot.startTime}-${slot.endTime}-${slot.roomName}-${index}`} className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1"><Clock3 size={13} />{slot.startTime} ~ {slot.endTime}</span>
+                      <span className="inline-flex items-center gap-1"><MapPin size={13} />{slot.roomName}</span>
+                    </li>
+                  ))}
+                </ul>
               </li>
             ))}
           </ul>

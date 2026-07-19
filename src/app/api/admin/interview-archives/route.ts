@@ -29,11 +29,14 @@ export async function GET(req: NextRequest) {
     return {
       id: doc.id,
       interviewDate: data.interviewDate as string,
+      deleteAfter: data.deleteAfter as string,
       candidateName: data.candidateName as string,
       positionName: data.positionName as string,
       typeLabel: data.typeLabel as string,
       sessionCount: data.sessionCount as number,
-      roomNames: (data.roomNames as string[]) ?? [],
+      scheduledSlots: (data.scheduledSlots as { startTime: string; endTime: string; roomName: string }[]) ?? [],
+      interviewerNames: (data.interviewerNames as string[]) ?? [],
+      bookedByNames: (data.bookedByNames as string[]) ?? [],
       archivedAt: (data.archivedAt as { toDate?: () => Date } | undefined)?.toDate?.().toISOString() ?? null,
     }
   })

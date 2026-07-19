@@ -6,11 +6,14 @@ import { auth } from '@/infrastructure/firebase/config'
 export interface InterviewArchive {
   id: string
   interviewDate: string
+  deleteAfter: string
   candidateName: string
   positionName: string
   typeLabel: string
   sessionCount: number
-  roomNames: string[]
+  scheduledSlots: { startTime: string; endTime: string; roomName: string }[]
+  interviewerNames: string[]
+  bookedByNames: string[]
   archivedAt: string | null
 }
 

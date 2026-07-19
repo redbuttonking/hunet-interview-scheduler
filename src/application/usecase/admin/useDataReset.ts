@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { getIdToken } from 'firebase/auth'
 import { auth } from '@/infrastructure/firebase/config'
 
-export type ResetCollectionKey = 'interviews' | 'interviewers' | 'positions' | 'roomReservations' | 'rooms'
+export type ResetCollectionKey = 'interviews' | 'interviewArchives' | 'interviewers' | 'positions' | 'roomReservations' | 'rooms'
 
 /** 선택한 컬렉션의 모든 문서를 서버에서 일괄 삭제한다 */
 export function useResetData() {
