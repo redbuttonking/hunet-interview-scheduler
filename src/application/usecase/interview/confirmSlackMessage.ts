@@ -47,9 +47,6 @@ ${interview.candidateName}님(${interview.positionName}) ${interview.typeLabel} 
 내 담당 일정:
 ${mySchedule}
 
-전체 일정:
-${formatScheduleLines(interview).join('\n')}
-
 ${CONFIRM_FOOTER}`
 }
 
@@ -80,12 +77,6 @@ ${updated.candidateName}님(${updated.positionName}) ${updated.typeLabel} 일정
 ${previousMySchedule}
 변경 후:
 ${updatedMySchedule}
-
-전체 일정 변경:
-변경 전:
-${formatScheduleLines(previous).join('\n')}
-변경 후:
-${formatScheduleLines(updated).join('\n')}
 
 ${CONFIRM_FOOTER}`
 }

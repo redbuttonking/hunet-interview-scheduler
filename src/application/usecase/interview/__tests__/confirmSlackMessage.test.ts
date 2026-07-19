@@ -50,14 +50,13 @@ describe('confirmSlackMessage', () => {
     expect(message).toContain('일정 조정이 필요하시다면 담당자에게 문의 주시기 바랍니다.')
   })
 
-  it('DM 안내에는 내 담당 일정과 전체 일정을 함께 표시한다', () => {
+  it('DM 안내에는 내 담당 일정만 표시한다', () => {
     const message = buildDmConfirmMessage(makeInterview(), 'iv-1')
 
     expect(message).toContain('내 담당 일정:')
     expect(message).toContain('2026-07-23(목) 10:00 ~ 11:00 · 행복룸 · 1차+2차 인터뷰')
-    expect(message).not.toContain('내 담당 일정:\n- 2026-07-23(목) 11:00 ~ 12:00 · 성장룸 · 3차 인터뷰')
-    expect(message).toContain('전체 일정:')
-    expect(message).toContain('2026-07-23(목) 11:00 ~ 12:00 · 성장룸 · 3차 인터뷰')
+    expect(message).not.toContain('전체 일정:')
+    expect(message).not.toContain('2026-07-23(목) 11:00 ~ 12:00 · 성장룸 · 3차 인터뷰')
   })
 
   it('일정 변경 안내에는 변경 전후 원데이 일정을 구분해 표시한다', () => {
@@ -84,6 +83,8 @@ describe('confirmSlackMessage', () => {
     expect(channelMessage).toContain('변경 후:')
     expect(channelMessage).toContain('2026-07-24(금) 14:00 ~ 15:00 · 성장룸 · 1차+2차 인터뷰')
     expect(dmMessage).toContain('내 담당 일정 변경:')
-    expect(dmMessage).toContain('전체 일정 변경:')
+    expect(dmMessage).not.toContain('전체 일정 변경:')
+    expect(dmMessage).not.toContain('2026-07-23(목) 11:00 ~ 12:00 · 성장룸 · 3차 인터뷰')
+    expect(dmMessage).not.toContain('2026-07-24(금) 15:00 ~ 16:00 · 행복룸 · 3차 인터뷰')
   })
 })

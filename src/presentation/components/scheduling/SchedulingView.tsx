@@ -331,10 +331,10 @@ export default function SchedulingView() {
             const period = interview.availabilityPeriod
 
             return (
-              <div key={interview.id} className="bg-card rounded-xl border border-border shadow-sm p-5">
+              <div key={interview.id} className="bg-card rounded-xl border border-border shadow-sm p-6">
                 {/* 카드 헤더: 배지 + 삭제 */}
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className={cn('text-sm font-semibold px-3 py-1.5 rounded-full whitespace-nowrap', cfg.className)}>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <span className={cn('text-base font-semibold px-3.5 py-2 rounded-full whitespace-nowrap', cfg.className)}>
                     {cfg.label}
                     {(interview.status === 'collecting' || interview.status === 'ready_to_schedule') && (
                       <span className="ml-1 opacity-70">
@@ -343,64 +343,64 @@ export default function SchedulingView() {
                     )}
                   </span>
                   {!isViewer && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       {interview.status === 'pending_slack' && (
                         <button
                           onClick={() => setEditModal(interview)}
-                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                          className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
                         >
-                          <Pencil size={13} />
+                          <Pencil size={15} />
                         </button>
                       )}
                       <button
                         onClick={() => setDeleteTarget(interview)}
-                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                        className="p-2 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   )}
                 </div>
                 {/* 후보자 정보 */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-base font-bold text-foreground">{interview.candidateName}</span>
-                  <span className="text-muted-foreground text-sm">·</span>
-                  <span className="text-sm text-muted-foreground">{interview.positionName}</span>
-                  <span className="text-muted-foreground text-sm">·</span>
-                  <span className="text-sm text-muted-foreground">{interview.typeLabel}</span>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="text-lg font-bold text-foreground">{interview.candidateName}</span>
+                  <span className="text-muted-foreground text-base">·</span>
+                  <span className="text-base text-muted-foreground">{interview.positionName}</span>
+                  <span className="text-muted-foreground text-base">·</span>
+                  <span className="text-base text-muted-foreground">{interview.typeLabel}</span>
                 </div>
 
                 {/* 기간 */}
                 {period && (
-                  <p className="text-xs text-muted-foreground mt-2">
+                  <p className="text-sm text-muted-foreground mt-2.5">
                     요청 기간: {period.startDate} ~ {period.endDate}
                   </p>
                 )}
 
                 {interview.manualInterviewers && interview.manualInterviewers.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground mt-1.5">
                     수동 입력 면접관: {interview.manualInterviewers.map((iv) => iv.name).join(', ')}
                   </p>
                 )}
 
                 {/* pending_slack: 슬랙 발송 버튼 */}
                 {interview.status === 'pending_slack' && !isViewer && (
-                  <div className="mt-4 flex justify-end gap-2">
+                  <div className="mt-5 flex flex-wrap justify-end gap-2">
                     <Button
-                      size="sm"
+                      size="default"
                       variant="outline"
-                      className="gap-1.5"
+                      className="gap-2"
                       onClick={() => setExistingConfirmModal(interview)}
                     >
-                      <Zap size={13} />
+                      <Zap size={15} />
                       즉시 확정
                     </Button>
                     <Button
-                      size="sm"
-                      className="gap-1.5"
+                      size="default"
+                      className="gap-2"
                       onClick={() => setSlackModal(interview)}
                     >
-                      <Send size={13} />
+                      <Send size={15} />
                       슬랙 발송
                     </Button>
                   </div>
@@ -408,8 +408,8 @@ export default function SchedulingView() {
 
                 {/* collecting: 면접관별 입력 현황 */}
                 {(interview.status === 'collecting' || interview.status === 'ready_to_schedule') && (
-                  <div className="mt-3 space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground mb-2.5">
                       면접관 가용 일정 ({submittedIds.size}/{interview.interviewerIds.length}명 입력)
                     </p>
                     {interview.interviewerIds.map((id) => {
@@ -417,27 +417,27 @@ export default function SchedulingView() {
                       const submitted = submittedIds.has(id)
                       return (
                         <div key={id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-sm">
+                          <div className="flex items-center gap-2.5 text-base">
                             {submitted ? (
-                              <CheckCircle2 size={14} className="text-emerald-500" />
+                              <CheckCircle2 size={16} className="text-emerald-500" />
                             ) : (
-                              <Circle size={14} className="text-muted-foreground/40" />
+                              <Circle size={16} className="text-muted-foreground/40" />
                             )}
                             <span className={submitted ? 'text-foreground' : 'text-muted-foreground'}>
                               {iv?.name ?? id}
                             </span>
                           </div>
                           {!submitted && iv && !isViewer && (
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4">
                               <button
                                 onClick={() => setResendConfirm({ interview, interviewerId: iv.id })}
-                                className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                                className="text-sm text-muted-foreground hover:text-primary transition-colors"
                               >
                                 재발송
                               </button>
                               <button
                                 onClick={() => setAvailModal({ interview, interviewer: iv })}
-                                className="text-xs text-primary hover:underline"
+                                className="text-sm text-primary hover:underline"
                               >
                                 일정 입력
                               </button>
@@ -446,7 +446,7 @@ export default function SchedulingView() {
                           {submitted && iv && !isViewer && (
                             <button
                               onClick={() => setAvailModal({ interview, interviewer: iv })}
-                              className="text-xs text-muted-foreground hover:underline"
+                              className="text-sm text-muted-foreground hover:underline"
                             >
                               수정
                             </button>
@@ -459,22 +459,22 @@ export default function SchedulingView() {
 
                 {/* ready_to_schedule: 즉시 확정 / 후보자 옵션 발송 */}
                 {interview.status === 'ready_to_schedule' && !isViewer && (
-                  <div className="mt-4 flex justify-end gap-2">
+                  <div className="mt-5 flex flex-wrap justify-end gap-2">
                     <Button
-                      size="sm"
+                      size="default"
                       variant="outline"
-                      className="gap-1.5"
+                      className="gap-2"
                       onClick={() => setRecommendModal({ interview })}
                     >
-                      <Zap size={13} />
+                      <Zap size={15} />
                       즉시 확정
                     </Button>
                     <Button
-                      size="sm"
-                      className="gap-1.5"
+                      size="default"
+                      className="gap-2"
                       onClick={() => setProposeModal(interview)}
                     >
-                      <Users size={13} />
+                      <Users size={15} />
                       조율 시작
                     </Button>
                   </div>
@@ -482,12 +482,12 @@ export default function SchedulingView() {
 
                 {/* pending_candidate: 발송된 옵션 목록 + 후보자 확정 */}
                 {interview.status === 'pending_candidate' && (
-                  <div className="mt-3">
+                  <div className="mt-4">
                     {interview.candidateOptions && interview.candidateOptions.length > 0 && (
-                      <div className="mb-3 space-y-1.5">
-                        <p className="text-xs font-medium text-muted-foreground">조율 중인 옵션</p>
+                      <div className="mb-4 space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">조율 중인 옵션</p>
                         {interview.candidateOptions.map((opt, i) => (
-                          <div key={i} className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
+                          <div key={i} className="px-4 py-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
                             <span className="font-semibold">옵션 {i + 1}</span>
                             {' · '}
                             {opt.date}
@@ -500,20 +500,20 @@ export default function SchedulingView() {
                       </div>
                     )}
                     {!isViewer && (
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-3">
                         <button
                           onClick={() => setRevertTarget(interview)}
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive transition-colors"
                         >
-                          <RotateCcw size={11} />
+                          <RotateCcw size={13} />
                           조율 취소
                         </button>
                         <Button
-                          size="sm"
-                          className="gap-1.5"
+                          size="default"
+                          className="gap-2"
                           onClick={() => setChoiceModal(interview)}
                         >
-                          <CheckCircle2 size={13} />
+                          <CheckCircle2 size={15} />
                           후보자 확정
                         </Button>
                       </div>
@@ -523,8 +523,8 @@ export default function SchedulingView() {
 
                 {/* confirmed: 확정 정보 */}
                 {interview.status === 'confirmed' && interview.confirmedSlot && (
-                  <div className="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm">
-                    <div className="flex items-start justify-between gap-2">
+                  <div className="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 text-base">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="font-semibold text-blue-700">확정 완료</p>
                         <p className="text-foreground mt-1">
@@ -532,9 +532,9 @@ export default function SchedulingView() {
                           {interview.confirmedSlot.startTime} ~ {interview.confirmedSlot.endTime}
                         </p>
                         {interview.confirmedSlot.slots?.length > 0 && (
-                          <div className="flex flex-col gap-0.5 mt-1">
+                          <div className="flex flex-col gap-1 mt-1.5">
                             {interview.confirmedSlot.slots.map((slot, si) => (
-                              <p key={si} className="text-xs text-muted-foreground">
+                              <p key={si} className="text-sm text-muted-foreground">
                                 {slot.startTime}~{slot.endTime} · {slot.roomName}
                               </p>
                             ))}
@@ -542,29 +542,29 @@ export default function SchedulingView() {
                         )}
                       </div>
                       {!isViewer && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap justify-end gap-2">
                           <Button
-                            size="sm"
+                            size="default"
                             variant="outline"
-                            className="gap-1.5 h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+                            className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
                             onClick={() => setChangeConfirmedModal(interview)}
                           >
-                            <Pencil size={13} />
+                            <Pencil size={15} />
                             일정 변경
                           </Button>
                           <Button
-                            size="sm"
+                            size="default"
                             variant="outline"
-                            className="gap-1.5 h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+                            className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
                             onClick={() => setNotifyModal(interview)}
                           >
                             후보자 안내
                           </Button>
                           <button
                             onClick={() => setRevertTarget(interview)}
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive transition-colors shrink-0 px-1"
                           >
-                            <RotateCcw size={11} />
+                            <RotateCcw size={13} />
                             확정 취소
                           </button>
                         </div>
