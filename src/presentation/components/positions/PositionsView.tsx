@@ -121,7 +121,7 @@ export default function PositionsView() {
 
       {/* 카드 그리드 */}
       {!isLoading && filteredPositions.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {filteredPositions.map((pos) => {
             const usedRounds = ALL_ROUNDS.filter((r) =>
               pos.interviewTypes.some((t) => t.sessions.some((s) => s.rounds.includes(r))),
@@ -131,11 +131,11 @@ export default function PositionsView() {
             return (
               <div
                 key={pos.id}
-                className="group bg-card rounded-xl border border-border shadow-sm p-4 flex flex-col gap-3"
+                className="group bg-card rounded-xl border border-border shadow-sm p-5 flex flex-col gap-4"
               >
                 {/* 포지션명 + 액션 */}
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-bold text-foreground leading-snug">{pos.name}</p>
+                  <p className="text-base font-bold text-foreground leading-snug break-words">{pos.name}</p>
                   {!isViewer && (
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <button
@@ -155,19 +155,20 @@ export default function PositionsView() {
                 </div>
 
                 {/* 인터뷰 유형 */}
-                <div className="flex flex-col gap-1.5 flex-1">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">인터뷰 유형</p>
-                  <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-2 flex-1">
+                  <p className="text-xs font-bold text-muted-foreground">인터뷰 유형</p>
+                  <div className="flex flex-col gap-2">
                     {pos.interviewTypes.map((type, ti) => (
-                      <div key={ti} className="flex items-center gap-1 flex-wrap">
-                        {type.sessions.map((session, si) => (
-                          <span key={si} className="flex items-center gap-0.5 shrink-0">
+                      <div key={ti} className="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {type.sessions.map((session, si) => (
+                            <span key={si} className="flex items-center gap-1 shrink-0">
                             {si > 0 && <span className="text-muted-foreground text-xs">→</span>}
                             {session.rounds.map((r) => (
                               <span
                                 key={r}
                                 className={cn(
-                                  'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold border',
+                                  'inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border',
                                   ROUND_COLORS[r],
                                 )}
                               >
@@ -175,41 +176,41 @@ export default function PositionsView() {
                               </span>
                             ))}
                           </span>
-                        ))}
-                        <span className="text-muted-foreground text-xs">—</span>
-                        <span className="text-xs text-foreground font-medium truncate">{type.label}</span>
+                          ))}
+                        </div>
+                        <p className="mt-1.5 text-sm font-semibold leading-5 text-foreground break-words">{type.label}</p>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {pos.slackChannelId && (
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Hash size={12} className="shrink-0" />
-                    <span className="truncate">
+                  <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                    <Hash size={14} className="shrink-0 mt-0.5" />
+                    <span className="break-words">
                       {pos.slackChannelName ?? pos.slackChannelId}
                     </span>
                   </div>
                 )}
 
                 {/* 면접관 — 항상 표시 */}
-                <div className="pt-2.5 border-t border-border flex flex-col gap-1">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">면접관</p>
+                <div className="pt-3 border-t border-border flex flex-col gap-2">
+                  <p className="text-xs font-bold text-muted-foreground">면접관</p>
                   {hasInterviewers ? (
-                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                    <div className="flex flex-col gap-1.5">
                       {usedRounds.map((round) => {
                         const names = (pos.interviewersByRound[round] ?? []).map(getInterviewerName)
                         if (names.length === 0) return null
                         return (
-                          <div key={round} className="flex items-center gap-1 text-xs">
-                            <span className={cn('font-semibold shrink-0', ROUND_TEXT_COLORS[round])}>{round}</span>
-                            <span className="text-muted-foreground truncate">{names.join(', ')}</span>
+                          <div key={round} className="flex items-start gap-2 text-sm leading-5">
+                            <span className={cn('font-bold shrink-0', ROUND_TEXT_COLORS[round])}>{round}</span>
+                            <span className="text-foreground break-words">{names.join(', ')}</span>
                           </div>
                         )
                       })}
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground/40">배치 없음</p>
+                    <p className="text-sm text-muted-foreground/60">배치 없음</p>
                   )}
                 </div>
               </div>
