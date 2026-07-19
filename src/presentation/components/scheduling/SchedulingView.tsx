@@ -167,11 +167,16 @@ export default function SchedulingView() {
         const slackIds = deleteTarget.interviewerIds
           .map((id) => getInterviewer(id)?.slackId)
           .filter((id): id is string => !!id)
-        if (slackIds.length > 0) {
-          const message = `[취소 안내] ${deleteTarget.candidateName}님(${deleteTarget.positionName}) 면접 가용 일정 조율이 관리자에 의해 취소되었습니다.`
-          await sendCancellationSlack.mutateAsync({ slackIds, message }).catch(() => {
-            toast.warning('취소 알림 슬랙 발송에 실패했습니다. 면접관에게 직접 알려주세요.')
-          })
+        const message = `[취소 안내] ${deleteTarget.candidateName}님(${deleteTarget.positionName}) 면접 가용 일정 조율이 관리자에 의해 취소되었습니다.`
+        const result = await sendCancellationSlack.mutateAsync({ slackIds, message }).catch(() => {
+          toast.warning('취소 알림 슬랙 발송에 실패했습니다. 면접관에게 직접 알려주세요.')
+          return null
+        })
+        if (result?.failed.length) {
+          toast.warning('일부 취소 알림 발송에 실패했습니다. 수신자를 확인해주세요.')
+        }
+        if (result?.unmatchedSystemUserNames.length) {
+          toast.warning(`Slack 계정을 찾지 못한 시스템 사용자: ${result.unmatchedSystemUserNames.join(', ')}`)
         }
       }
       await deleteInterview.mutateAsync(deleteTarget)

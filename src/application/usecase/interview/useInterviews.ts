@@ -215,9 +215,14 @@ export function useSendCancellationSlack() {
       const res = await fetch('/api/slack/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ slackIds, message }),
+        body: JSON.stringify({ slackIds, message, includeCancellationRecipients: true }),
       })
       if (!res.ok) throw new Error('슬랙 발송 실패')
+      const data = (await res.json()) as { failed?: string[]; unmatchedSystemUserNames?: string[] }
+      return {
+        failed: data.failed ?? [],
+        unmatchedSystemUserNames: data.unmatchedSystemUserNames ?? [],
+      }
     },
   })
 }

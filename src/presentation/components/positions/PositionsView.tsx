@@ -40,10 +40,18 @@ export default function PositionsView() {
 
   const filteredPositions = useMemo(
     () =>
-      positions.filter((p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [positions, search],
+      positions.filter((p) => {
+        const keyword = search.trim().toLowerCase()
+        if (!keyword) return true
+        const matchesPosition = p.name.toLowerCase().includes(keyword)
+        const matchesInterviewer = Object.values(p.interviewersByRound)
+          .flat()
+          .some((id) => (interviewers.find((interviewer) => interviewer.id === id)?.name ?? '')
+            .toLowerCase()
+            .includes(keyword))
+        return matchesPosition || matchesInterviewer
+      }),
+    [positions, interviewers, search],
   )
 
   function getInterviewerName(id: string) {
