@@ -17,6 +17,7 @@ import { useIsViewer } from '@/presentation/components/auth/AuthProvider'
 import InterviewCreateModal from './InterviewCreateModal'
 import DirectConfirmModal from './DirectConfirmModal'
 import ExistingInterviewConfirmModal from './ExistingInterviewConfirmModal'
+import ConfirmedInterviewChangeModal from './ConfirmedInterviewChangeModal'
 import InterviewEditModal from './InterviewEditModal'
 import AvailabilityInputModal from './AvailabilityInputModal'
 import ScheduleRecommendModal from './ScheduleRecommendModal'
@@ -75,6 +76,7 @@ export default function SchedulingView() {
   const [createOpen, setCreateOpen] = useState(false)
   const [directConfirmOpen, setDirectConfirmOpen] = useState(false)
   const [existingConfirmModal, setExistingConfirmModal] = useState<Interview | null>(null)
+  const [changeConfirmedModal, setChangeConfirmedModal] = useState<Interview | null>(null)
   const [availModal, setAvailModal] = useState<AvailabilityModalState | null>(null)
   const [recommendModal, setRecommendModal] = useState<RecommendModalState | null>(null)
   const [proposeModal, setProposeModal] = useState<Interview | null>(null)
@@ -545,6 +547,15 @@ export default function SchedulingView() {
                             size="sm"
                             variant="outline"
                             className="gap-1.5 h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+                            onClick={() => setChangeConfirmedModal(interview)}
+                          >
+                            <Pencil size={13} />
+                            일정 변경
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
                             onClick={() => setNotifyModal(interview)}
                           >
                             후보자 안내
@@ -575,6 +586,17 @@ export default function SchedulingView() {
           open={!!existingConfirmModal}
           onOpenChange={(open) => !open && setExistingConfirmModal(null)}
           interview={existingConfirmModal}
+          scheduledInterviews={interviews.filter((interview) =>
+            interview.status === 'confirmed' || interview.status === 'pending_candidate',
+          )}
+          interviewerNames={Object.fromEntries(interviewers.map((interviewer) => [interviewer.id, interviewer.name]))}
+        />
+      )}
+      {changeConfirmedModal && (
+        <ConfirmedInterviewChangeModal
+          open={!!changeConfirmedModal}
+          onOpenChange={(open) => !open && setChangeConfirmedModal(null)}
+          interview={changeConfirmedModal}
           scheduledInterviews={interviews.filter((interview) =>
             interview.status === 'confirmed' || interview.status === 'pending_candidate',
           )}

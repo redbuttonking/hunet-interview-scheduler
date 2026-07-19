@@ -11,6 +11,7 @@ import {
   runTransaction,
   onSnapshot,
   Timestamp,
+  type Transaction,
 } from 'firebase/firestore'
 import { db } from './config'
 import { COLLECTIONS } from './collections'
@@ -55,6 +56,87 @@ function assertReservableBlock(
   if (invalid) {
     throw new Error(`예약 가능한 시간 범위를 벗어났습니다: ${id}`)
   }
+}
+
+async function confirmReservableBlocks(tx: Transaction, slots: ConfirmSlotInput[]): Promise<void> {
+  const col = collection(db, COLLECTIONS.ROOM_RESERVATIONS)
+  const blockMap = new Map<string, ConfirmSlotInput[]>()
+  for (const slot of slots) {
+    if (!blockMap.has(slot.reservationId)) blockMap.set(slot.reservationId, [])
+    blockMap.get(slot.reservationId)!.push(slot)
+  }
+  const blockIds = [...blockMap.keys()]
+  const blockRefs = blockIds.map((id) => doc(db, COLLECTIONS.ROOM_RESERVATIONS, id))
+  const snaps = await Promise.all(blockRefs.map((ref) => tx.get(ref)))
+
+  snaps.forEach((snap, i) => {
+    if (!snap.exists()) throw new Error(`예약을 찾을 수 없습니다: ${blockIds[i]}`)
+  })
+
+  snaps.forEach((snap, i) => {
+    const blockRef = blockRefs[i]
+    const d = snap.data() as Record<string, unknown>
+    const roomId = d.roomId as string
+    const roomName = d.roomName as string
+    const date = d.date as string
+    const blockStart = d.startTime as string
+    const blockEnd = d.endTime as string
+    const bookingFields = {
+      bookedByUserId: (d.bookedByUserId as string | null) ?? null,
+      bookedByName: (d.bookedByName as string | null) ?? null,
+      memo: (d.memo as string | undefined) ?? '',
+    }
+    const confirmedRanges = blockMap.get(blockIds[i])!
+      .sort((a, b) => a.confirmedStart.localeCompare(b.confirmedStart))
+
+    assertReservableBlock(
+      d,
+      confirmedRanges.map((range) => ({ startTime: range.confirmedStart, endTime: range.confirmedEnd })),
+      blockIds[i],
+    )
+
+    let prevEnd = blockStart
+    let firstRange = true
+    for (const range of confirmedRanges) {
+      if (prevEnd < range.confirmedStart) {
+        tx.set(doc(col), {
+          roomId, roomName, date,
+          startTime: prevEnd, endTime: range.confirmedStart,
+          status: 'reserved', interviewId: null,
+          ...bookingFields,
+          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+        })
+      }
+
+      if (firstRange) {
+        tx.update(blockRef, {
+          startTime: range.confirmedStart, endTime: range.confirmedEnd,
+          status: 'confirmed', interviewId: range.interviewId,
+          updatedAt: serverTimestamp(),
+        })
+        firstRange = false
+      } else {
+        tx.set(doc(col), {
+          roomId, roomName, date,
+          startTime: range.confirmedStart, endTime: range.confirmedEnd,
+          status: 'confirmed', interviewId: range.interviewId,
+          ...bookingFields,
+          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+        })
+      }
+      prevEnd = range.confirmedEnd
+    }
+
+    if (prevEnd < blockEnd) {
+      tx.set(doc(col), {
+        roomId, roomName, date,
+        startTime: prevEnd, endTime: blockEnd,
+        status: 'reserved', interviewId: null,
+        ...bookingFields,
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      })
+    }
+  })
 }
 
 export const roomReservationRepository: IRoomReservationRepository = {
@@ -114,89 +196,34 @@ export const roomReservationRepository: IRoomReservationRepository = {
   },
 
   async confirmSlots(slots: ConfirmSlotInput[]): Promise<void> {
-    const col = collection(db, COLLECTIONS.ROOM_RESERVATIONS)
+    await runTransaction(db, (tx) => confirmReservableBlocks(tx, slots))
+  },
 
-    // 원데이 인터뷰처럼 같은 블록에서 여러 세션을 확정하는 경우 그룹핑
-    const blockMap = new Map<string, ConfirmSlotInput[]>()
-    for (const slot of slots) {
-      if (!blockMap.has(slot.reservationId)) blockMap.set(slot.reservationId, [])
-      blockMap.get(slot.reservationId)!.push(slot)
+  async replaceConfirmedSlots(previousReservationIds: string[], slots: ConfirmSlotInput[]): Promise<void> {
+    const interviewId = slots[0]?.interviewId
+    if (!interviewId || previousReservationIds.length === 0) {
+      throw new Error('변경할 확정 예약이 없습니다.')
     }
-    const blockIds = [...blockMap.keys()]
 
     await runTransaction(db, async (tx) => {
-      const blockRefs = blockIds.map((id) => doc(db, COLLECTIONS.ROOM_RESERVATIONS, id))
-      const snaps = await Promise.all(blockRefs.map((ref) => tx.get(ref)))
+      const previousRefs = previousReservationIds.map((id) => doc(db, COLLECTIONS.ROOM_RESERVATIONS, id))
+      const previousSnaps = await Promise.all(previousRefs.map((ref) => tx.get(ref)))
 
-      snaps.forEach((snap, i) => {
-        if (!snap.exists()) throw new Error(`예약을 찾을 수 없습니다: ${blockIds[i]}`)
+      previousSnaps.forEach((snap, i) => {
+        if (!snap.exists()) throw new Error(`기존 확정 예약을 찾을 수 없습니다: ${previousReservationIds[i]}`)
+        const data = snap.data() as Record<string, unknown>
+        if (data.status !== 'confirmed' || data.interviewId !== interviewId) {
+          throw new Error(`변경할 수 없는 예약입니다: ${previousReservationIds[i]}`)
+        }
       })
 
-      snaps.forEach((snap, i) => {
-        const blockRef = blockRefs[i]
-        const d = snap.data() as Record<string, unknown>
-        const roomId = d.roomId as string
-        const roomName = d.roomName as string
-        const date = d.date as string
-        const blockStart = d.startTime as string
-        const blockEnd = d.endTime as string
-        const bookingFields = {
-          bookedByUserId: (d.bookedByUserId as string | null) ?? null,
-          bookedByName: (d.bookedByName as string | null) ?? null,
-          memo: (d.memo as string | undefined) ?? '',
-        }
-
-        const confirmedRanges = blockMap.get(blockIds[i])!
-          .sort((a, b) => a.confirmedStart.localeCompare(b.confirmedStart))
-        assertReservableBlock(
-          d,
-          confirmedRanges.map((range) => ({ startTime: range.confirmedStart, endTime: range.confirmedEnd })),
-          blockIds[i],
-        )
-
-        let prevEnd = blockStart
-        let firstRange = true
-
-        for (const range of confirmedRanges) {
-          if (prevEnd < range.confirmedStart) {
-            tx.set(doc(col), {
-              roomId, roomName, date,
-              startTime: prevEnd, endTime: range.confirmedStart,
-              status: 'reserved', interviewId: null,
-              ...bookingFields,
-              createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-            })
-          }
-
-          if (firstRange) {
-            tx.update(blockRef, {
-              startTime: range.confirmedStart, endTime: range.confirmedEnd,
-              status: 'confirmed', interviewId: range.interviewId,
-              updatedAt: serverTimestamp(),
-            })
-            firstRange = false
-          } else {
-            tx.set(doc(col), {
-              roomId, roomName, date,
-              startTime: range.confirmedStart, endTime: range.confirmedEnd,
-              status: 'confirmed', interviewId: range.interviewId,
-              ...bookingFields,
-              createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-            })
-          }
-
-          prevEnd = range.confirmedEnd
-        }
-
-        if (prevEnd < blockEnd) {
-          tx.set(doc(col), {
-            roomId, roomName, date,
-            startTime: prevEnd, endTime: blockEnd,
-            status: 'reserved', interviewId: null,
-            ...bookingFields,
-            createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-          })
-        }
+      await confirmReservableBlocks(tx, slots)
+      previousRefs.forEach((ref) => {
+        tx.update(ref, {
+          status: 'reserved',
+          interviewId: null,
+          updatedAt: serverTimestamp(),
+        })
       })
     })
   },

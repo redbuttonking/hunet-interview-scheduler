@@ -52,3 +52,40 @@ ${formatScheduleLines(interview).join('\n')}
 
 ${CONFIRM_FOOTER}`
 }
+
+export function buildChannelChangeMessage(previous: Interview, updated: Interview): string {
+  return `[인터뷰 일정 변경 안내]
+${updated.candidateName}님(${updated.positionName}) ${updated.typeLabel} 일정이 변경되었습니다.
+
+변경 전:
+${formatScheduleLines(previous).join('\n')}
+
+변경 후:
+${formatScheduleLines(updated).join('\n')}
+
+${CONFIRM_FOOTER}`
+}
+
+export function buildDmChangeMessage(previous: Interview, updated: Interview, interviewerId: string): string {
+  const previousMyLines = formatScheduleLines(previous, interviewerId)
+  const updatedMyLines = formatScheduleLines(updated, interviewerId)
+  const previousMySchedule = previousMyLines.length > 0 ? previousMyLines.join('\n') : '- 배정된 세션을 확인하지 못했습니다.'
+  const updatedMySchedule = updatedMyLines.length > 0 ? updatedMyLines.join('\n') : '- 배정된 세션을 확인하지 못했습니다.'
+
+  return `[인터뷰 일정 변경 안내]
+${updated.candidateName}님(${updated.positionName}) ${updated.typeLabel} 일정이 변경되었습니다.
+
+내 담당 일정 변경:
+변경 전:
+${previousMySchedule}
+변경 후:
+${updatedMySchedule}
+
+전체 일정 변경:
+변경 전:
+${formatScheduleLines(previous).join('\n')}
+변경 후:
+${formatScheduleLines(updated).join('\n')}
+
+${CONFIRM_FOOTER}`
+}

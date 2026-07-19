@@ -1,7 +1,12 @@
 // 인터뷰 확정 Slack 안내 메시지 포맷을 검증하는 테스트
 import { describe, expect, it } from 'vitest'
 import type { Interview } from '@/domain/model/Interview'
-import { buildChannelConfirmMessage, buildDmConfirmMessage } from '../confirmSlackMessage'
+import {
+  buildChannelChangeMessage,
+  buildChannelConfirmMessage,
+  buildDmChangeMessage,
+  buildDmConfirmMessage,
+} from '../confirmSlackMessage'
 
 function makeInterview(): Interview {
   return {
@@ -53,5 +58,32 @@ describe('confirmSlackMessage', () => {
     expect(message).not.toContain('내 담당 일정:\n- 2026-07-23(목) 11:00 ~ 12:00 · 성장룸 · 3차 인터뷰')
     expect(message).toContain('전체 일정:')
     expect(message).toContain('2026-07-23(목) 11:00 ~ 12:00 · 성장룸 · 3차 인터뷰')
+  })
+
+  it('일정 변경 안내에는 변경 전후 원데이 일정을 구분해 표시한다', () => {
+    const previous = makeInterview()
+    const updated: Interview = {
+      ...previous,
+      confirmedSlot: {
+        date: '2026-07-24',
+        startTime: '14:00',
+        endTime: '16:00',
+        slots: [
+          { startTime: '14:00', endTime: '15:00', roomId: 'room-3', roomName: '성장룸' },
+          { startTime: '15:00', endTime: '16:00', roomId: 'room-4', roomName: '행복룸' },
+        ],
+      },
+    }
+
+    const channelMessage = buildChannelChangeMessage(previous, updated)
+    const dmMessage = buildDmChangeMessage(previous, updated, 'iv-1')
+
+    expect(channelMessage).toContain('[인터뷰 일정 변경 안내]')
+    expect(channelMessage).toContain('변경 전:')
+    expect(channelMessage).toContain('2026-07-23(목) 10:00 ~ 11:00 · 행복룸 · 1차+2차 인터뷰')
+    expect(channelMessage).toContain('변경 후:')
+    expect(channelMessage).toContain('2026-07-24(금) 14:00 ~ 15:00 · 성장룸 · 1차+2차 인터뷰')
+    expect(dmMessage).toContain('내 담당 일정 변경:')
+    expect(dmMessage).toContain('전체 일정 변경:')
   })
 })

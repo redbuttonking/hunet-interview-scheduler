@@ -12,7 +12,12 @@ import { Interview, InterviewerAvailability, CandidateOption } from '@/domain/mo
 import { Interviewer } from '@/domain/model/Interviewer'
 import { RoomReservation } from '@/domain/model/Room'
 import { RecommendedSchedule } from '@/domain/service/ScheduleRecommendService'
-import { buildChannelConfirmMessage, buildDmConfirmMessage } from './confirmSlackMessage'
+import {
+  buildChannelChangeMessage,
+  buildChannelConfirmMessage,
+  buildDmChangeMessage,
+  buildDmConfirmMessage,
+} from './confirmSlackMessage'
 
 /** 기준일 기준으로 다음 평일(월~목, 공휴일 제외)을 YYYY-MM-DD로 반환 */
 function nextBusinessDay(): string {
@@ -71,6 +76,34 @@ async function notifyInterviewConfirmed(interview: Interview): Promise<void> {
     failed.push(...result)
   }
   if (failed.length > 0) console.warn('[Slack] 확정 안내 DM 발송 실패:', failed)
+}
+
+async function notifyInterviewScheduleChanged(previous: Interview, updated: Interview): Promise<boolean> {
+  if (!updated.confirmedSlot || !updated.slackSendMode) return false
+
+  if (updated.slackSendMode === 'channel') {
+    const targets = updated.slackTargetIds ?? []
+    const failed = await postSlackMessage(targets, buildChannelChangeMessage(previous, updated))
+    if (failed.length > 0) console.warn('[Slack] 일정 변경 안내 채널 발송 실패:', failed)
+    return targets.length > 0 && failed.length === 0
+  }
+
+  const allInterviewers = await interviewerRepository.findAll()
+  const bySlackId = new Map(allInterviewers.filter((iv) => iv.slackId).map((iv) => [iv.slackId, iv]))
+  const fallbackSlackIds = allInterviewers
+    .filter((iv) => updated.interviewerIds.includes(iv.id) && iv.slackId)
+    .map((iv) => iv.slackId)
+  const targetSlackIds = (updated.slackTargetIds?.length ? updated.slackTargetIds : fallbackSlackIds)
+    .filter((slackId) => bySlackId.has(slackId))
+
+  const failed: string[] = []
+  for (const slackId of targetSlackIds) {
+    const interviewer = bySlackId.get(slackId) as Interviewer
+    const result = await postSlackMessage([slackId], buildDmChangeMessage(previous, updated, interviewer.id))
+    failed.push(...result)
+  }
+  if (failed.length > 0) console.warn('[Slack] 일정 변경 안내 DM 발송 실패:', failed)
+  return targetSlackIds.length > 0 && failed.length === 0
 }
 
 async function resetReservation(interview: Interview): Promise<void> {
@@ -434,6 +467,63 @@ export function useConfirmSchedule() {
           console.warn('[Slack] 확정 안내 발송 중 오류:', error)
         })
       }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INTERVIEWS_KEY })
+      qc.invalidateQueries({ queryKey: ['reservations'] })
+    },
+  })
+}
+
+/** 확정 인터뷰의 회의실 예약을 새 일정으로 교체하고 변경 안내를 발송한다. */
+export function useChangeConfirmedSchedule() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      interviewId,
+      schedule,
+    }: {
+      interviewId: string
+      schedule: RecommendedSchedule
+    }) => {
+      const previous = await interviewRepository.findById(interviewId)
+      if (!previous?.confirmedSlot) throw new Error('확정된 인터뷰를 찾을 수 없습니다.')
+
+      const previousReservations = await roomReservationRepository.findByInterviewId(interviewId)
+      const previousReservationIds = previousReservations
+        .filter((reservation) => reservation.status === 'confirmed')
+        .map((reservation) => reservation.id)
+
+      await roomReservationRepository.replaceConfirmedSlots(
+        previousReservationIds,
+        schedule.slots.map((slot) => ({
+          reservationId: slot.reservationId,
+          date: schedule.date,
+          confirmedStart: slot.startTime,
+          confirmedEnd: slot.endTime,
+          interviewId,
+        })),
+      )
+
+      const confirmedSlot = {
+        date: schedule.date,
+        startTime: schedule.slots[0].startTime,
+        endTime: schedule.slots[schedule.slots.length - 1].endTime,
+        slots: schedule.slots.map((slot) => ({
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          roomId: slot.roomId,
+          roomName: slot.roomName,
+        })),
+      }
+      const updated = { ...previous, confirmedSlot }
+
+      await interviewRepository.update(interviewId, { confirmedSlot })
+      const notificationSent = await notifyInterviewScheduleChanged(previous, updated).catch((error) => {
+        console.warn('[Slack] 일정 변경 안내 발송 중 오류:', error)
+        return false
+      })
+      return { notificationSent }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: INTERVIEWS_KEY })

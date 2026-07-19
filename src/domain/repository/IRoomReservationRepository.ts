@@ -49,6 +49,8 @@ export interface IRoomReservationRepository {
   delete(id: string): Promise<void>
   /** 복수 슬롯을 원자적으로 분할·확정 (runTransaction) */
   confirmSlots(slots: ConfirmSlotInput[]): Promise<void>
+  /** 확정된 기존 슬롯을 해제하고 새 슬롯을 원자적으로 확정 */
+  replaceConfirmedSlots(previousReservationIds: string[], slots: ConfirmSlotInput[]): Promise<void>
   /**
    * 조율 시작 — 선택한 슬롯을 조율중으로 분할.
    * 동일 블록에서 여러 옵션을 선택해도 올바르게 처리.
