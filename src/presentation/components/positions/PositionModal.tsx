@@ -37,6 +37,7 @@ function InterviewerSearch({
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const addedInterviewers = allInterviewers.filter((iv) => addedIds.includes(iv.id))
   const filtered = allInterviewers.filter((iv) => {
@@ -57,6 +58,13 @@ function InterviewerSearch({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  function handleAdd(id: string) {
+    onAdd(id)
+    setQuery('')
+    setFocused(true)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
+
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
       <span className="text-xs font-semibold text-muted-foreground">{round} 면접관</span>
@@ -76,6 +84,7 @@ function InterviewerSearch({
         <div className="relative">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
+            ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -96,7 +105,7 @@ function InterviewerSearch({
                   <button
                     key={iv.id}
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); onAdd(iv.id); setQuery('') }}
+                    onClick={() => handleAdd(iv.id)}
                     className="flex items-center justify-between w-full px-3 py-2 text-left hover:bg-muted"
                   >
                     <span className="text-sm font-medium">{iv.name}</span>

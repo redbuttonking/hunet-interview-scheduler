@@ -204,7 +204,16 @@ export default function PositionsView() {
                         return (
                           <div key={round} className="flex items-start gap-2 text-sm leading-5">
                             <span className={cn('font-bold shrink-0', ROUND_TEXT_COLORS[round])}>{round}</span>
-                            <span className="text-foreground break-words">{names.join(', ')}</span>
+                            <div className="flex flex-wrap gap-1.5 min-w-0">
+                              {names.map((name, index) => (
+                                <span
+                                  key={`${name}-${index}`}
+                                  className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground"
+                                >
+                                  {name}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         )
                       })}
