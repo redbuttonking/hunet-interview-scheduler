@@ -25,6 +25,7 @@ const STATUS_DOT: Record<ReservationStatus, string> = {
   coordinating:'bg-emerald-400',
   confirmed:   'bg-blue-400',
 }
+const MAX_VISIBLE_RESERVATIONS = 4
 
 interface Props {
   days: Date[]
@@ -177,7 +178,7 @@ export default function WeekView({
                 className="grid"
                 style={{ gridTemplateColumns: '150px repeat(5, 1fr)' }}
               >
-                <div className="flex items-start px-3 py-3 bg-muted/10 border-r border-border h-[150px]">
+                <div className="flex items-start px-3 py-3 bg-muted/10 border-r border-border h-[170px]">
                   <span className="text-xs font-semibold text-foreground leading-tight pt-0.5">
                     {room.name}
                   </span>
@@ -190,13 +191,13 @@ export default function WeekView({
                     <div
                       key={dStr}
                       className={cn(
-                        'border-l border-border px-1.5 py-1.5 cursor-pointer hover:bg-muted/30 transition-colors h-[150px]',
+                        'border-l border-border px-1.5 py-1.5 cursor-pointer hover:bg-muted/30 transition-colors h-[170px]',
                         isToday && 'bg-primary/3',
                       )}
                       onClick={() => onDayClick(d)}
                     >
                       <div className="flex flex-col gap-1">
-                        {cellRes.slice(0, 3).map((res) => {
+                        {cellRes.slice(0, MAX_VISIBLE_RESERVATIONS).map((res) => {
                           const interviewInfo = res.interviewId ? interviewInfoMap[res.interviewId] : null
                           const ownerName = res.bookedByName || '등록자 정보 없음'
                           return (
@@ -232,9 +233,9 @@ export default function WeekView({
                             </div>
                           )
                         })}
-                        {cellRes.length > 3 && (
+                        {cellRes.length > MAX_VISIBLE_RESERVATIONS && (
                           <span className="text-[10px] font-semibold text-muted-foreground pl-1">
-                            +{cellRes.length - 3}
+                            +{cellRes.length - MAX_VISIBLE_RESERVATIONS}
                           </span>
                         )}
                       </div>
