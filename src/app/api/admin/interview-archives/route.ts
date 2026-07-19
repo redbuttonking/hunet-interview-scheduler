@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     return {
       id: doc.id,
       interviewDate: data.interviewDate as string,
+      candidateName: data.candidateName as string,
       positionName: data.positionName as string,
       typeLabel: data.typeLabel as string,
       sessionCount: data.sessionCount as number,

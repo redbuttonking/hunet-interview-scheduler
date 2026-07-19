@@ -6,6 +6,7 @@ import { auth } from '@/infrastructure/firebase/config'
 export interface InterviewArchive {
   id: string
   interviewDate: string
+  candidateName: string
   positionName: string
   typeLabel: string
   sessionCount: number

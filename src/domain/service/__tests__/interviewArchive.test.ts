@@ -10,8 +10,9 @@ describe('isInterviewArchiveDue', () => {
 })
 
 describe('createInterviewArchiveSummary', () => {
-  it('후보자와 면접관 정보 없이 운영 이력만 구성한다', () => {
+  it('후보자명과 운영 이력만 구성하고 면접관 정보는 제외한다', () => {
     const summary = createInterviewArchiveSummary({
+      candidateName: '홍길동',
       positionName: '프론트엔드 개발',
       typeLabel: '원데이 인터뷰',
       sessions: [{ rounds: ['1차'] }, { rounds: ['2차'] }],
@@ -23,12 +24,12 @@ describe('createInterviewArchiveSummary', () => {
 
     expect(summary).toEqual({
       interviewDate: '2026-07-23',
+      candidateName: '홍길동',
       positionName: '프론트엔드 개발',
       typeLabel: '원데이 인터뷰',
       sessionCount: 2,
       roomNames: ['[818호] 행복룸'],
     })
-    expect(summary).not.toHaveProperty('candidateName')
     expect(summary).not.toHaveProperty('interviewerIds')
   })
 })

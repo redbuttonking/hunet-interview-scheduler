@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
 
     try {
       const summary = createInterviewArchiveSummary({
+        candidateName: interview.candidateName as string,
         positionName: interview.positionName as string,
         typeLabel: interview.typeLabel as string,
         sessions: (interview.sessions as { rounds: string[] }[]) ?? [],

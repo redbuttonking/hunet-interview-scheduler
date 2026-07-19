@@ -1,5 +1,6 @@
-// 확정 인터뷰의 개인정보 없는 보관 이력을 구성하는 도메인 함수
+// 확정 인터뷰의 보관 이력을 구성하는 도메인 함수
 export interface ArchiveSourceInterview {
+  candidateName: string
   positionName: string
   typeLabel: string
   sessions: { rounds: string[] }[]
@@ -11,6 +12,7 @@ export interface ArchiveSourceInterview {
 
 export interface InterviewArchiveSummary {
   interviewDate: string
+  candidateName: string
   positionName: string
   typeLabel: string
   sessionCount: number
@@ -25,12 +27,13 @@ export function isInterviewArchiveDue(interviewDate: string, today: string): boo
   return today >= archiveStartDate
 }
 
-/** 후보자, 면접관, Slack 정보를 제외한 운영 이력만 남긴다. */
+/** 후보자명과 운영 이력만 남기고 면접관과 Slack 정보는 제외한다. */
 export function createInterviewArchiveSummary(source: ArchiveSourceInterview): InterviewArchiveSummary {
   if (!source.confirmedSlot) throw new Error('확정 일정이 없는 인터뷰는 보관할 수 없습니다.')
 
   return {
     interviewDate: source.confirmedSlot.date,
+    candidateName: source.candidateName,
     positionName: source.positionName,
     typeLabel: source.typeLabel,
     sessionCount: source.sessions.length,

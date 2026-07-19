@@ -19,7 +19,7 @@ export default function InterviewArchiveSection() {
           <div>
             <h2 className="text-base font-bold text-foreground">인터뷰 보관 이력</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              인터뷰일로부터 7일이 지난 확정 건입니다. 후보자와 면접관 정보는 저장하지 않습니다.
+              인터뷰일로부터 7일이 지난 확정 건입니다. 후보자명 외 면접관과 Slack 정보는 저장하지 않습니다.
             </p>
           </div>
         </div>
@@ -43,6 +43,7 @@ export default function InterviewArchiveSection() {
                   <span className="text-xs text-muted-foreground">{archive.sessionCount}개 세션</span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span>후보자 {archive.candidateName}</span>
                   <span className="inline-flex items-center gap-1"><CalendarDays size={13} />{archive.interviewDate}</span>
                   <span className="inline-flex items-center gap-1"><MapPin size={13} />{archive.roomNames.join(', ')}</span>
                   {archive.archivedAt && (
